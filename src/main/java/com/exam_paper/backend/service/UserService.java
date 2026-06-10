@@ -17,8 +17,15 @@ public class UserService {
 
         if(userOpt.isPresent()) {
             User user = userOpt.get();
-            return user.getPassword().equals(password);
+            System.out.println(">>> User found in DB! Username: " + user.getUsername());
+            System.out.println(">>> DB Password: " + user.getPassword());
+
+            boolean isMatch = user.getPassword().equals(password);
+            System.out.println(">>> Password Match Status: " + isMatch);
+            return isMatch;
+            //return user.getPassword().equals(password);
         }
+        System.out.println(">>> User NOT found in DB for username: " + username);
         return false;
     }
 }
