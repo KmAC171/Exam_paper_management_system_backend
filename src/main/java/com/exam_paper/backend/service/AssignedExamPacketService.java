@@ -8,6 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import com.exam_paper.backend.dto.LecturerDashboardDTO;
+
+
+import java.time.LocalDate;
 
 import java.util.List;
 
@@ -62,6 +66,35 @@ public class AssignedExamPacketService {
                 packet.getCourse().getDepartment().getDepartmentName(),
                 packet.getStatus().getStatusName(),
                 packet.getDeadline()
+        );
+    }
+
+
+    // =========================================================
+    // 2. Dash Board view
+    // =========================================================
+
+    public LecturerDashboardDTO getDashboard(Long lecturerId) {
+
+        long totalAssigned = repository.countByLecturerUserId(lecturerId);
+
+        long completed = repository.countByLecturerUserIdAndStatusStatusName(
+                lecturerId, "Completed"
+        );
+
+        long overdue = repository.countByLecturerUserIdAndDeadlineBeforeAndStatusStatusNameNot(
+                lecturerId,
+                LocalDate.now(),
+                "Completed"
+        );
+
+        long pending = totalAssigned - completed - overdue;
+
+        return new LecturerDashboardDTO(
+                totalAssigned,
+                pending,
+                completed,
+                overdue
         );
     }
 }

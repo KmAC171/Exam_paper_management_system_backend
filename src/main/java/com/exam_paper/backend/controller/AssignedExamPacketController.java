@@ -1,6 +1,7 @@
 package com.exam_paper.backend.controller;
 
 import com.exam_paper.backend.dto.AssignedPacketDTO;
+import com.exam_paper.backend.dto.LecturerDashboardDTO;
 import com.exam_paper.backend.dto.PacketCourseDetailsDTO;
 import com.exam_paper.backend.service.AssignedExamPacketService;
 import lombok.RequiredArgsConstructor;
@@ -34,5 +35,14 @@ public class AssignedExamPacketController {
             @RequestParam Long lecturerId) {
 
         return service.getPacketByIdForLecturer(packetId, lecturerId);
+    }
+
+    // =====================================================
+    // DASHBOARD API
+    // GET /api/dashboard?lecturerId=1
+    // =====================================================
+    @GetMapping("/dashboard")
+    public LecturerDashboardDTO getDashboard(@RequestParam Long lecturerId) {
+        return service.getDashboard(lecturerId);
     }
 }
