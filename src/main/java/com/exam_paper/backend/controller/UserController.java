@@ -30,4 +30,9 @@ public class UserController {
         }
 
     }
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@RequestBody UserDTO registerRequest) {
+        userService.register(registerRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+    }
 }
