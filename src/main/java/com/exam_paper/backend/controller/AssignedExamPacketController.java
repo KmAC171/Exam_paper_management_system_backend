@@ -6,6 +6,10 @@ import com.exam_paper.backend.dto.PacketCourseDetailsDTO;
 import com.exam_paper.backend.service.AssignedExamPacketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -44,5 +48,20 @@ public class AssignedExamPacketController {
     @GetMapping("/dashboard")
     public LecturerDashboardDTO getDashboard(@RequestParam Long lecturerId) {
         return service.getDashboard(lecturerId);
+    }
+
+
+
+    // WORKFLOW API - UPDATE STATUS
+    // PATCH /api/packets/{id}/status
+    // =====================================================
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<String> updateStatus(
+            @PathVariable Long id,
+            @RequestBody UpdatePacketStatusDTO dto) {
+
+        service.updatePacketStatus(id, dto);
+
+        return ResponseEntity.ok("Packet status updated successfully");
     }
 }

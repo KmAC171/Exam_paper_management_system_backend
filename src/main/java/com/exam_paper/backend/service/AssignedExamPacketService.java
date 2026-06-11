@@ -9,6 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import com.exam_paper.backend.dto.LecturerDashboardDTO;
+import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
+
+
 
 
 import java.time.LocalDate;
@@ -96,5 +99,24 @@ public class AssignedExamPacketService {
                 completed,
                 overdue
         );
+    }
+
+    // =========================================================
+    // 4. Update the Status of paper packet
+    // =========================================================
+
+
+    public void updatePacketStatus(Long packetId, UpdatePacketStatusDTO dto) {
+
+        ExamPacket packet = repository.findById(packetId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Packet not found"));
+
+        // 🔥 Update status
+        packet.getStatus().setStatusName(dto.getStatusName());
+
+        repository.save(packet);
     }
 }
