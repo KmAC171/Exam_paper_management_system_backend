@@ -2,20 +2,16 @@ package com.exam_paper.backend.service;
 
 import com.exam_paper.backend.dto.AssignedPacketDTO;
 import com.exam_paper.backend.dto.PacketCourseDetailsDTO;
+import com.exam_paper.backend.dto.LecturerDashboardDTO;
+import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.repository.ExamPacketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import com.exam_paper.backend.dto.LecturerDashboardDTO;
-import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
-
-
-
 
 import java.time.LocalDate;
-
 import java.util.List;
 
 @Service
@@ -25,26 +21,35 @@ public class AssignedExamPacketService {
     private final ExamPacketRepository repository;
 
     // =========================================================
-    // 1. GET ALL PACKETS ASSIGNED TO LECTURER
+    // 1. CURRENT SEMESTER PACKETS (DASHBOARD VIEW)
     // =========================================================
-    public List<AssignedPacketDTO> getAssignedPackets(Long lecturerId) {
+    public List<AssignedPacketDTO> getCurrentSemesterPackets(Long lecturerId) {
 
-        List<ExamPacket> packets = repository.findByLecturerUserId(lecturerId);
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndSemesterCurrentTrue(lecturerId);
 
         return packets.stream()
-                .map(p -> new AssignedPacketDTO(
-                        p.getPacketId(),
-                        p.getCourse().getCourseCode(),
-                        p.getCourse().getCourseName(),
-                        p.getCourse().getDepartment().getDepartmentName(),
-                        p.getStatus().getStatusName(),
-                        p.getDeadline()
-                ))
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+
+
+    // =========================================================
+    // 2. ALL PACKETS (HISTORY / MY PACKETS)
+    // =========================================================
+    public List<AssignedPacketDTO> getAllPackets(Long lecturerId) {
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserId(lecturerId);
+
+        return packets.stream()
+                .map(this::mapToDTO)
                 .toList();
     }
 
     // =========================================================
-    // 2. GET SINGLE PACKET (LECTURER ACCESS ONLY)
+    // 3. SINGLE PACKET DETAILS (SECURE ACCESS)
     // =========================================================
     public PacketCourseDetailsDTO getPacketByIdForLecturer(Long packetId, Long lecturerId) {
 
@@ -54,7 +59,7 @@ public class AssignedExamPacketService {
                                 HttpStatus.NOT_FOUND,
                                 "Packet not found"));
 
-        // 🔒 ACCESS CONTROL (only assigned lecturer)
+        // ACCESS CONTROL
         if (!packet.getLecturer().getUserId().equals(lecturerId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -72,24 +77,25 @@ public class AssignedExamPacketService {
         );
     }
 
-
     // =========================================================
-    // 2. Dash Board view
+    // 4. DASHBOARD SUMMARY (CURRENT SEMESTER)
     // =========================================================
-
     public LecturerDashboardDTO getDashboard(Long lecturerId) {
 
-        long totalAssigned = repository.countByLecturerUserId(lecturerId);
+        long totalAssigned =
+                repository.countByLecturerUserIdAndSemesterCurrentTrue(lecturerId);
 
-        long completed = repository.countByLecturerUserIdAndStatusStatusName(
-                lecturerId, "Completed"
-        );
+        long completed =
+                repository.countByLecturerUserIdAndStatusStatusName(
+                        lecturerId, "Completed"
+                );
 
-        long overdue = repository.countByLecturerUserIdAndDeadlineBeforeAndStatusStatusNameNot(
-                lecturerId,
-                LocalDate.now(),
-                "Completed"
-        );
+        long overdue =
+                repository.countOverduePackets(
+                        lecturerId,
+                        LocalDate.now(),
+                        "Completed"
+                );
 
         long pending = totalAssigned - completed - overdue;
 
@@ -102,10 +108,8 @@ public class AssignedExamPacketService {
     }
 
     // =========================================================
-    // 4. Update the Status of paper packet
+    // 5. UPDATE STATUS
     // =========================================================
-
-
     public void updatePacketStatus(Long packetId, UpdatePacketStatusDTO dto) {
 
         ExamPacket packet = repository.findById(packetId)
@@ -114,9 +118,23 @@ public class AssignedExamPacketService {
                                 HttpStatus.NOT_FOUND,
                                 "Packet not found"));
 
-        // 🔥 Update status
         packet.getStatus().setStatusName(dto.getStatusName());
 
         repository.save(packet);
+    }
+
+    // =========================================================
+    // 6. COMMON MAPPER (BEST PRACTICE)
+    // =========================================================
+    private AssignedPacketDTO mapToDTO(ExamPacket p) {
+
+        return new AssignedPacketDTO(
+                p.getPacketId(),
+                p.getCourse().getCourseCode(),
+                p.getCourse().getCourseName(),
+                p.getCourse().getDepartment().getDepartmentName(),
+                p.getStatus().getStatusName(),
+                p.getDeadline()
+        );
     }
 }

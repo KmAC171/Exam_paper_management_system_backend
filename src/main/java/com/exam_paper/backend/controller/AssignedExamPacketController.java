@@ -3,12 +3,9 @@ package com.exam_paper.backend.controller;
 import com.exam_paper.backend.dto.AssignedPacketDTO;
 import com.exam_paper.backend.dto.LecturerDashboardDTO;
 import com.exam_paper.backend.dto.PacketCourseDetailsDTO;
+import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
 import com.exam_paper.backend.service.AssignedExamPacketService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.exam_paper.backend.dto.UpdatePacketStatusDTO;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,47 +18,60 @@ public class AssignedExamPacketController {
     private final AssignedExamPacketService service;
 
     // =========================================================
-    // 1. MY PACKETS (LECTURER DASHBOARD)
-    // GET /api/packets/my?lecturerId=1
+    // 1. CURRENT SEMESTER PACKETS (DASHBOARD VIEW)
+    // GET /api/packets/dashboard/current?lecturerId=1
     // =========================================================
-    @GetMapping("/my")
-    public List<AssignedPacketDTO> getMyPackets(@RequestParam Long lecturerId) {
-        return service.getAssignedPackets(lecturerId);
+    @GetMapping("/dashboard/current")
+    public List<AssignedPacketDTO> getCurrentSemesterPackets(
+            @RequestParam Long lecturerId
+    ) {
+        return service.getCurrentSemesterPackets(lecturerId);
     }
 
     // =========================================================
-    // 2. SINGLE PACKET DETAILS (LECTURER ONLY ACCESS)
+    // 2. ALL PACKETS (HISTORY / MY PACKETS)
+    // GET /api/packets/my?lecturerId=1
+    // =========================================================
+    @GetMapping("/my")
+    public List<AssignedPacketDTO> getMyPackets(
+            @RequestParam Long lecturerId
+    ) {
+        return service.getAllPackets(lecturerId);
+    }
+
+    // =========================================================
+    // 3. SINGLE PACKET DETAILS
     // GET /api/packets/{packetId}/my?lecturerId=1
     // =========================================================
     @GetMapping("/{packetId}/my")
     public PacketCourseDetailsDTO getPacketById(
             @PathVariable Long packetId,
-            @RequestParam Long lecturerId) {
-
+            @RequestParam Long lecturerId
+    ) {
         return service.getPacketByIdForLecturer(packetId, lecturerId);
     }
 
-    // =====================================================
-    // DASHBOARD API
-    // GET /api/dashboard?lecturerId=1
-    // =====================================================
+    // =========================================================
+    // 4. DASHBOARD SUMMARY
+    // GET /api/packets/dashboard?lecturerId=1
+    // =========================================================
     @GetMapping("/dashboard")
-    public LecturerDashboardDTO getDashboard(@RequestParam Long lecturerId) {
+    public LecturerDashboardDTO getDashboard(
+            @RequestParam Long lecturerId
+    ) {
         return service.getDashboard(lecturerId);
     }
 
-
-
-    // WORKFLOW API - UPDATE STATUS
+    // =========================================================
+    // 5. UPDATE PACKET STATUS
     // PATCH /api/packets/{id}/status
-    // =====================================================
+    // =========================================================
     @PatchMapping("/{id}/status")
-    public ResponseEntity<String> updateStatus(
+    public String updateStatus(
             @PathVariable Long id,
-            @RequestBody UpdatePacketStatusDTO dto) {
-
+            @RequestBody UpdatePacketStatusDTO dto
+    ) {
         service.updatePacketStatus(id, dto);
-
-        return ResponseEntity.ok("Packet status updated successfully");
+        return "Packet status updated successfully";
     }
 }
