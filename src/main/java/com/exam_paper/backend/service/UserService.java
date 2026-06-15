@@ -1,5 +1,6 @@
 package com.exam_paper.backend.service;
 
+import com.exam_paper.backend.Security.JwtUtill;
 import com.exam_paper.backend.dto.UserDTO;
 import com.exam_paper.backend.entity.User;
 import com.exam_paper.backend.repository.UserRepository;
@@ -14,18 +15,19 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtill jwtUtill;
 
-    public boolean login(String username, String password){
+    public String login(String username, String password){
         Optional<User> userOpt = userRepository.findByUsername(username);
 
         if(userOpt.isPresent()) {
             User user = userOpt.get();
-            return passwordEncoder.matches(password, user.getPassword());
-
-
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                return jwtUtill.generateToken(username);
+            }
         }
 
-        return false;
+        return null;
     }
 
     public void register(UserDTO dto) {

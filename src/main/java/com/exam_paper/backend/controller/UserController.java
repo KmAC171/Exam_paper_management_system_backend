@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -15,15 +17,15 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody UserDTO loginRequest) {
+    public ResponseEntity<?> login(@RequestBody UserDTO loginRequest) {
 
-        boolean isAuthenticated =
-                userService.login(
-                        loginRequest.getUsername(),
-                        loginRequest.getPassword());
+        String token = userService.login(
+                loginRequest.getUsername(),
+                loginRequest.getPassword()
+        );
 
-        if (isAuthenticated) {
-            return ResponseEntity.ok("Login Successful");
+        if (token != null) {
+            return ResponseEntity.ok(Map.of("token", token));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid Username or Password!");
