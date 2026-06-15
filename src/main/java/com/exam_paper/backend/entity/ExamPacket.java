@@ -32,5 +32,10 @@ public class ExamPacket {
     @JoinColumn(name = "status_id")
     private PacketStatus status;
 
+    @ManyToOne
+    @JoinColumn(name = "semester_id")
+    private Semester semester;
+
+
     private LocalDate deadline;
 }
