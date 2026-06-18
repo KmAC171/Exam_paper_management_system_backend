@@ -27,7 +27,7 @@ public class TokenBlacklistService {
 
     @Scheduled(fixedRate = 360000)
     public void cleanExpiredTokens() {
-        blackListedTokenRepository.deleteExpiredTokens(new Date());d
+        blackListedTokenRepository.deleteExpiredTokens(new Date());
         System.out.println(">>> Cleaned up expired blacklisted tokens");
     }
 
