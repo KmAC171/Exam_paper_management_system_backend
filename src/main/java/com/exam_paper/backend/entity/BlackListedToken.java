@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 @Entity
 @Table(name = "blacklisted_tokens")
 @Data
@@ -13,6 +15,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class BlackListedToken {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
@@ -21,5 +24,5 @@ public class BlackListedToken {
     private String token;
 
     @Column(nullable = false)
-    private Data expiresAt;
+    private Date expiresAt;
 }

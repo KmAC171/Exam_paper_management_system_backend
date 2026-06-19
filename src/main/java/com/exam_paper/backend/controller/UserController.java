@@ -37,4 +37,14 @@ public class UserController {
         userService.register(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            userService.logout(token);
+            return ResponseEntity.ok("Logged out successfully");
+        }
+        return ResponseEntity.badRequest().body("No token provided");
+    }
 }
