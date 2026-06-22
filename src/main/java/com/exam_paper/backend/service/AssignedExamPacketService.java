@@ -140,4 +140,20 @@ public class AssignedExamPacketService {
                 p.getDeadline()
         );
     }
+
+    public List<AssignedPacketDTO> searchByCourseCode(
+            Long lecturerId,
+            String courseCode
+    ) {
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndCourseCourseCodeContainingIgnoreCase(
+                        lecturerId,
+                        courseCode
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
 }

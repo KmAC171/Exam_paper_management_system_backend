@@ -74,4 +74,19 @@ public class AssignedExamPacketController {
         service.updatePacketStatus(id, dto);
         return "Packet status updated successfully";
     }
+
+    // =========================================================
+// SEARCH BY COURSE CODE
+// GET /api/packets/search/course-code?lecturerId=1&courseCode=CS
+// =========================================================
+    @GetMapping("/search/course-code")
+    public List<AssignedPacketDTO> searchByCourseCode(
+            @RequestParam Long lecturerId,
+            @RequestParam String courseCode
+    ) {
+        return service.searchByCourseCode(
+                lecturerId,
+                courseCode
+        );
+    }
 }

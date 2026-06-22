@@ -42,5 +42,10 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
             Long semesterId
     );
 
+    List<ExamPacket> findByLecturerUserIdAndCourseCourseCodeContainingIgnoreCase(
+            Long lecturerId,
+            String courseCode
+    );
+
 
 }
