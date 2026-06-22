@@ -156,4 +156,20 @@ public class AssignedExamPacketService {
                 .map(this::mapToDTO)
                 .toList();
     }
+
+    public List<AssignedPacketDTO> searchByCourseName(
+            Long lecturerId,
+            String courseName
+    ) {
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndCourseCourseNameContainingIgnoreCase(
+                        lecturerId,
+                        courseName
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
 }

@@ -89,4 +89,19 @@ public class AssignedExamPacketController {
                 courseCode
         );
     }
+
+    // =========================================================
+// SEARCH BY COURSE NAME
+// GET /api/packets/search/course-name?lecturerId=1&courseName=Programming
+// =========================================================
+    @GetMapping("/search/course-name")
+    public List<AssignedPacketDTO> searchByCourseName(
+            @RequestParam Long lecturerId,
+            @RequestParam String courseName
+    ) {
+        return service.searchByCourseName(
+                lecturerId,
+                courseName
+        );
+    }
 }
