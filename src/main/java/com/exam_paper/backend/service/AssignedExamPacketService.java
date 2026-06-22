@@ -170,6 +170,24 @@ public class AssignedExamPacketService {
 
         return packets.stream()
                 .map(this::mapToDTO)
+
+
+                .toList();
+    }
+
+    public List<AssignedPacketDTO> filterByStatus(
+            Long lecturerId,
+            String statusName
+    ) {
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndStatusStatusNameIgnoreCase(
+                        lecturerId,
+                        statusName
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
                 .toList();
     }
 }

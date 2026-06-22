@@ -104,4 +104,21 @@ public class AssignedExamPacketController {
                 courseName
         );
     }
+
+    // =========================================================
+// FILTER BY STATUS
+// GET /api/packets/filter/status?lecturerId=1&status=Pending
+// =========================================================
+    @GetMapping("/filter/status")
+    public List<AssignedPacketDTO> filterByStatus(
+            @RequestParam Long lecturerId,
+            @RequestParam String status
+    ) {
+        return service.filterByStatus(
+                lecturerId,
+                status
+        );
+    }
+
+
 }
