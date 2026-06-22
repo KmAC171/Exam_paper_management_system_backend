@@ -65,6 +65,19 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
             List<String> statusNames
     );
 
+    @Query("""
+    SELECT p
+    FROM ExamPacket p
+    WHERE p.lecturer.userId = :lecturerId
+    AND p.deadline < :today
+    AND p.status.statusName <> :status
+""")
+    List<ExamPacket> findOverduePackets(
+            @Param("lecturerId") Long lecturerId,
+            @Param("today") LocalDate today,
+            @Param("status") String status
+    );
+
 
 
 

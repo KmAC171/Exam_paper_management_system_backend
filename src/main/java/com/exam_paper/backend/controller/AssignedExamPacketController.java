@@ -148,5 +148,16 @@ public class AssignedExamPacketController {
         return service.getPendingAndCompletedPackets(lecturerId);
     }
 
+    // =========================================================
+// VIEW OVERDUE PACKETS
+// GET /api/packets/overdue?lecturerId=1
+// =========================================================
+    @GetMapping("/overdue")
+    public List<AssignedPacketDTO> getOverduePackets(
+            @RequestParam Long lecturerId
+    ) {
+        return service.getOverduePackets(lecturerId);
+    }
+
 
 }

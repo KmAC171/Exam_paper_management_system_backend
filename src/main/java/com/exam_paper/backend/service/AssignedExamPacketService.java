@@ -221,4 +221,18 @@ public class AssignedExamPacketService {
                 .map(this::mapToDTO)
                 .toList();
     }
+
+    public List<AssignedPacketDTO> getOverduePackets(Long lecturerId) {
+
+        List<ExamPacket> packets =
+                repository.findOverduePackets(
+                        lecturerId,
+                        LocalDate.now(),
+                        "Completed"
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
 }
