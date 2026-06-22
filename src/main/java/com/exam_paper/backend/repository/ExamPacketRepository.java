@@ -55,6 +55,10 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
             Long lecturerId,
             String statusName
     );
+    List<ExamPacket> findByLecturerUserIdAndDeadline(
+            Long lecturerId,
+            LocalDate deadline
+    );
 
 
 

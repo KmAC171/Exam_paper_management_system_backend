@@ -8,6 +8,7 @@ import com.exam_paper.backend.service.AssignedExamPacketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -117,6 +118,22 @@ public class AssignedExamPacketController {
         return service.filterByStatus(
                 lecturerId,
                 status
+        );
+    }
+
+    // =========================================================
+// FILTER BY DEADLINE
+// GET /api/packets/filter/deadline?lecturerId=1&deadline=2026-03-01
+// =========================================================
+    @GetMapping("/filter/deadline")
+    public List<AssignedPacketDTO> filterByDeadline(
+            @RequestParam Long lecturerId,
+            @RequestParam String deadline
+    ) {
+
+        return service.filterByDeadline(
+                lecturerId,
+                LocalDate.parse(deadline)
         );
     }
 

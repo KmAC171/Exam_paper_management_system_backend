@@ -190,4 +190,20 @@ public class AssignedExamPacketService {
                 .map(this::mapToDTO)
                 .toList();
     }
+
+    public List<AssignedPacketDTO> filterByDeadline(
+            Long lecturerId,
+            LocalDate deadline
+    ) {
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndDeadline(
+                        lecturerId,
+                        deadline
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
 }
