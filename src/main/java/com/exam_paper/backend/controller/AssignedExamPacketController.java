@@ -137,5 +137,16 @@ public class AssignedExamPacketController {
         );
     }
 
+    // =========================================================
+// VIEW PENDING + COMPLETED PACKETS
+// GET /api/packets/status/summary?lecturerId=1
+// =========================================================
+    @GetMapping("/status/summary")
+    public List<AssignedPacketDTO> getPendingAndCompletedPackets(
+            @RequestParam Long lecturerId
+    ) {
+        return service.getPendingAndCompletedPackets(lecturerId);
+    }
+
 
 }

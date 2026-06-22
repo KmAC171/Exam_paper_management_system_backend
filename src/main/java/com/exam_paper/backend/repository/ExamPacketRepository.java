@@ -60,6 +60,11 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
             LocalDate deadline
     );
 
+    List<ExamPacket> findByLecturerUserIdAndStatusStatusNameIn(
+            Long lecturerId,
+            List<String> statusNames
+    );
+
 
 
 

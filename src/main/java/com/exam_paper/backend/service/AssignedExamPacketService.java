@@ -206,4 +206,19 @@ public class AssignedExamPacketService {
                 .map(this::mapToDTO)
                 .toList();
     }
+
+    public List<AssignedPacketDTO> getPendingAndCompletedPackets(Long lecturerId) {
+
+        List<String> statuses = List.of("Pending", "Completed");
+
+        List<ExamPacket> packets =
+                repository.findByLecturerUserIdAndStatusStatusNameIn(
+                        lecturerId,
+                        statuses
+                );
+
+        return packets.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
 }
