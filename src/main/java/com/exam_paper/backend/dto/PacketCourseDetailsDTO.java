@@ -15,4 +15,5 @@ public class PacketCourseDetailsDTO {
     private String departmentName;
     private String status;
     private LocalDate deadline;
+    private String currentHolder;
 }

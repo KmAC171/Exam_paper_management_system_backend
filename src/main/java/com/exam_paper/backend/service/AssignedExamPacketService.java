@@ -73,7 +73,10 @@ public class AssignedExamPacketService {
                 packet.getCourse().getCourseName(),
                 packet.getCourse().getDepartment().getDepartmentName(),
                 packet.getStatus().getStatusName(),
-                packet.getDeadline()
+                packet.getDeadline(),
+                packet.getCurrentHolder() != null
+                        ? packet.getCurrentHolder().getFullName()
+                        : "Not Assigned"
         );
     }
 

@@ -36,6 +36,11 @@ public class ExamPacket {
     @JoinColumn(name = "semester_id")
     private Semester semester;
 
+    @ManyToOne
+    @JoinColumn(name = "current_holder_id")
+    private User currentHolder;
+
+
 
     private LocalDate deadline;
 }
