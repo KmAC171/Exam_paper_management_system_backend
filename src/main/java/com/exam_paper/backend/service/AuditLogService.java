@@ -38,40 +38,39 @@ public class AuditLogService {
                         )
                 );
 
-        AuditLog log = new AuditLog();
-        log.setUser(user);
-        log.setAction(action);
-        log.setEntity(entity);
-        log.setEntityId(entityId);
-        log.setDetails(details);
+        AuditLog log = AuditLog.builder()
+                .user(user)
+                .action(action)
+                .entity(entity)
+                .entityId(entityId)
+                .details(details)
+                .timestamp(LocalDateTime.now())
+                .build();
 
         auditLogRepository.save(log);
     }
 
     // =========================================================
-    // GET USER ACTIVITY HISTORY
+    // USER HISTORY
     // =========================================================
     public List<AuditLog> getUserActivityHistory(Long userId) {
-
         return auditLogRepository.findByUserUserIdOrderByTimestampDesc(userId);
     }
 
     // =========================================================
-    // GET ENTITY HISTORY
+    // ENTITY HISTORY
     // =========================================================
     public List<AuditLog> getEntityHistory(String entity, Long entityId) {
-
         return auditLogRepository.findByEntityAndEntityId(entity, entityId);
     }
 
     // =========================================================
-    // GET ACTIVITY BETWEEN DATES
+    // DATE RANGE
     // =========================================================
     public List<AuditLog> getActivityBetweenDates(
             LocalDateTime start,
             LocalDateTime end
     ) {
-
         return auditLogRepository.findByTimestampBetweenOrderByTimestampDesc(start, end);
     }
 }
