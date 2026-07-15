@@ -1,20 +1,23 @@
 package com.exam_paper.backend.Security;
 
+
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import lombok.Value;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 
 @Component
-public class JwtUtill {
+public class JwtUtil {
 
+    @Value("${jwt.secret:changeitchangeitchangeitchangeit}")
     private String secret;
 
+    @Value("${jwt.expiration:86400000}")
     private long expiration;
 
     private Key getSigningKey() {

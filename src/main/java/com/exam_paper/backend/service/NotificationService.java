@@ -4,9 +4,9 @@ import com.exam_paper.backend.dto.NotificationDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.entity.Notification;
 import com.exam_paper.backend.entity.User;
+import com.exam_paper.backend.repository.ExamPacketRepository;
 import com.exam_paper.backend.repository.NotificationRepository;
 import com.exam_paper.backend.repository.UserRepository;
-import com.exam_paper.backend.repository.ExamPacketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,18 +31,12 @@ public class NotificationService {
             String notificationType
     ) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found"
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         ExamPacket packet = null;
         if (packetId != null) {
             packet = packetRepository.findById(packetId)
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Packet not found"
-                    ));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Packet not found"));
         }
 
         Notification notification = new Notification();
@@ -72,10 +66,7 @@ public class NotificationService {
 
     public void markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Notification not found"
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
 
         notification.setStatus("Read");
         notificationRepository.save(notification);
@@ -89,8 +80,8 @@ public class NotificationService {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
         List<ExamPacket> packets = packetRepository.findAll().stream()
-                .filter(p -> p.getDeadline().equals(tomorrow))
-                .filter(p -> !("Completed".equals(p.getStatus().getStatusName())))
+                .filter(p -> p.getDeadline() != null && p.getDeadline().equals(tomorrow))
+                .filter(p -> p.getStatus() == null || !"Completed".equalsIgnoreCase(p.getStatus().getStatusName()))
                 .toList();
 
         for (ExamPacket packet : packets) {
@@ -108,8 +99,8 @@ public class NotificationService {
         LocalDate today = LocalDate.now();
 
         List<ExamPacket> packets = packetRepository.findAll().stream()
-                .filter(p -> p.getDeadline().isBefore(today))
-                .filter(p -> !("Completed".equals(p.getStatus().getStatusName())))
+                .filter(p -> p.getDeadline() != null && p.getDeadline().isBefore(today))
+                .filter(p -> p.getStatus() == null || !"Completed".equalsIgnoreCase(p.getStatus().getStatusName()))
                 .toList();
 
         for (ExamPacket packet : packets) {

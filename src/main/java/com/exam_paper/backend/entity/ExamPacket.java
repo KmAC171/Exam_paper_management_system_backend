@@ -2,6 +2,7 @@ package com.exam_paper.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDate;
 
 @Entity
@@ -32,8 +33,13 @@ public class ExamPacket {
     @JoinColumn(name = "status_id")
     private PacketStatus status;
 
-    private LocalDate deadline;
+    @ManyToOne
+    @JoinColumn(name = "semester_id")
+    private Semester semester;
 
-    public void setCurrentHolder(User moderator) {
-    }
+    @ManyToOne
+    @JoinColumn(name = "current_holder_id")
+    private User currentHolder;
+
+    private LocalDate deadline;
 }

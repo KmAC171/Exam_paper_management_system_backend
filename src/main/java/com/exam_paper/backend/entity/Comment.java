@@ -1,11 +1,5 @@
 package com.exam_paper.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +11,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class Comment {
 
     @Id
@@ -25,12 +18,19 @@ public class Comment {
     private Long commentId;
 
     @ManyToOne
+    @JoinColumn(name = "packet_id")
     private ExamPacket packet;
 
     @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
     private String commentText;
 
     private LocalDateTime timestamp;
+
+    @PrePersist
+    public void prePersist() {
+        this.timestamp = LocalDateTime.now();
+    }
 }

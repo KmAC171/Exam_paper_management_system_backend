@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "PACKET_MOVEMENT")
+@Table(name = "packet_movement")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

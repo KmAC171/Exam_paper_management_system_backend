@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "NOTIFICATION")
+@Table(name = "notification")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -35,7 +35,7 @@ public class Notification {
     private String notificationType;
 
     @Column(name = "status", length = 20)
-    private String status; // Unread / Read
+    private String status;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

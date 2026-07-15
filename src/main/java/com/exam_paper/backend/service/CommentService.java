@@ -24,30 +24,12 @@ public class CommentService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
 
-    // =========================================================
-    // ADD COMMENT ON PACKET
-    // =========================================================
-    public CommentDTO addComment(
-            Long packetId,
-            Long userId,
-            CreateCommentDTO dto
-    ) {
-
+    public CommentDTO addComment(Long packetId, Long userId, CreateCommentDTO dto) {
         ExamPacket packet = packetRepository.findById(packetId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Packet not found"
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Packet not found"));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "User not found"
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Comment comment = new Comment();
         comment.setPacket(packet);
@@ -56,7 +38,6 @@ public class CommentService {
 
         Comment saved = commentRepository.save(comment);
 
-        // Log to audit
         auditLogService.logAction(
                 userId,
                 "COMMENT",
@@ -68,36 +49,19 @@ public class CommentService {
         return mapToDTO(saved);
     }
 
-    // =========================================================
-    // GET ALL COMMENTS FOR A PACKET
-    // =========================================================
     public List<CommentDTO> getPacketComments(Long packetId) {
-
         return commentRepository.findByPacketPacketIdOrderByTimestampDesc(packetId)
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
     }
 
-    // =========================================================
-    // DELETE COMMENT
-    // =========================================================
     public void deleteComment(Long commentId, Long userId) {
-
         Comment comment = commentRepository.findById(commentId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Comment not found"
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
 
-        // Only the comment author or admin can delete
         if (!comment.getUser().getUserId().equals(userId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You cannot delete this comment"
-            );
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot delete this comment");
         }
 
         commentRepository.deleteById(commentId);
@@ -111,11 +75,7 @@ public class CommentService {
         );
     }
 
-    // =========================================================
-    // COMMON MAPPER
-    // =========================================================
     private CommentDTO mapToDTO(Comment comment) {
-
         return new CommentDTO(
                 comment.getCommentId(),
                 comment.getPacket().getPacketId(),
