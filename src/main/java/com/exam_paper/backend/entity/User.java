@@ -5,17 +5,12 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class User {
-
-    public enum Role {
-        ROLE_ADMIN,
-        ROLE_MODERATOR,
-        ROLE_USER
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,14 +18,10 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String username;
-    @Column(nullable = false)
+
     private String fullName;
 
-    @Column(nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
+    private String role;
 }
