@@ -23,9 +23,6 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final ExamPacketRepository packetRepository;
 
-    // =========================================================
-    // SEND NOTIFICATION (INTERNAL USE)
-    // =========================================================
     public void sendNotification(
             Long userId,
             Long packetId,
@@ -33,24 +30,19 @@ public class NotificationService {
             String type,
             String notificationType
     ) {
-
         User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "User not found"
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         ExamPacket packet = null;
         if (packetId != null) {
             packet = packetRepository.findById(packetId)
-                    .orElseThrow(() ->
-                            new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND,
-                                    "Packet not found"
-                            )
-                    );
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Packet not found"
+                    ));
         }
 
         Notification notification = new Notification();
@@ -64,63 +56,41 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    // =========================================================
-    // GET UNREAD NOTIFICATIONS
-    // =========================================================
     public List<NotificationDTO> getUnreadNotifications(Long userId) {
-
         return notificationRepository.findByUserUserIdAndStatus(userId, "Unread")
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
     }
 
-    // =========================================================
-    // GET ALL NOTIFICATIONS
-    // =========================================================
     public List<NotificationDTO> getAllNotifications(Long userId) {
-
         return notificationRepository.findByUserUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
     }
 
-    // =========================================================
-    // MARK AS READ
-    // =========================================================
     public void markAsRead(Long notificationId) {
-
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Notification not found"
-                        )
-                );
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Notification not found"
+                ));
 
         notification.setStatus("Read");
         notificationRepository.save(notification);
     }
 
-    // =========================================================
-    // GET UNREAD COUNT
-    // =========================================================
     public long getUnreadCount(Long userId) {
         return notificationRepository.countByUserUserIdAndStatus(userId, "Unread");
     }
 
-    // =========================================================
-    // SEND DEADLINE REMINDER
-    // =========================================================
     public void sendDeadlineReminders() {
-
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
-        // Find all packets with deadline tomorrow that are not completed
         List<ExamPacket> packets = packetRepository.findAll().stream()
                 .filter(p -> p.getDeadline().equals(tomorrow))
-                .filter(p -> !"Completed".equals(p.getStatus().getStatusName()))
+                .filter(p -> !("Completed".equals(p.getStatus().getStatusName())))
                 .toList();
 
         for (ExamPacket packet : packets) {
@@ -134,17 +104,12 @@ public class NotificationService {
         }
     }
 
-    // =========================================================
-    // SEND OVERDUE ALERTS
-    // =========================================================
     public void sendOverdueAlerts() {
-
         LocalDate today = LocalDate.now();
 
-        // Find all overdue packets
         List<ExamPacket> packets = packetRepository.findAll().stream()
                 .filter(p -> p.getDeadline().isBefore(today))
-                .filter(p -> !"Completed".equals(p.getStatus().getStatusName()))
+                .filter(p -> !("Completed".equals(p.getStatus().getStatusName())))
                 .toList();
 
         for (ExamPacket packet : packets) {
@@ -158,11 +123,7 @@ public class NotificationService {
         }
     }
 
-    // =========================================================
-    // COMMON MAPPER
-    // =========================================================
     private NotificationDTO mapToDTO(Notification notification) {
-
         return new NotificationDTO(
                 notification.getNotificationId(),
                 notification.getMessage(),
