@@ -12,17 +12,16 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public boolean login(String username, String password){
+    public boolean login(String username, String password) {
         Optional<User> userOpt = userRepository.findByUsername(username);
 
-        if(userOpt.isPresent()) {
+        if (userOpt.isPresent()) {
             User user = userOpt.get();
             return passwordEncoder.matches(password, user.getPassword());
-
-
         }
 
         return false;
@@ -33,8 +32,9 @@ public class UserService {
                 .username(dto.getUsername())
                 .fullName(dto.getFullname())
                 .password(passwordEncoder.encode(dto.getPassword()))
-                .role(User.Role.ROLE_USER)
+                .role("ROLE_USER")
                 .build();
+
         userRepository.save(user);
     }
 }
