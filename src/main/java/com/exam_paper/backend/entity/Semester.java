@@ -1,22 +1,19 @@
 package com.exam_paper.backend.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Semester {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    private Long semesterId;
 
-    @Column(unique = true)
-    private String username;
+    private String name;
 
-    private String fullName;
+    private boolean current;
 }
