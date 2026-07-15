@@ -7,15 +7,12 @@ import com.exam_paper.backend.entity.Marking;
 
 import org.springframework.data.jpa.repository.*;
 
-import org.springframework.data.repository.query.Param;
-
-
 import java.util.List;
 
 
 
 public interface MarkingRepository
-        extends JpaRepository<Marking, Long> {
+        extends JpaRepository<Marking,Long>{
 
 
 
@@ -23,10 +20,9 @@ public interface MarkingRepository
             SELECT new com.exam_paper.backend.dto.MarkingProgressResponseDTO(
 
             u.userId,
-            u.name,
+            u.fullName,
             m.totalScripts,
             m.markedScripts,
-
             (m.markedScripts * 100.0 / m.totalScripts)
 
             )
@@ -35,12 +31,9 @@ public interface MarkingRepository
 
             JOIN m.lecturer u
 
-            WHERE u.department.departmentId=:departmentId
-
             """)
-    List<MarkingProgressResponseDTO> getMarkingProgress(
-            @Param("departmentId") Long departmentId
-    );
+    List<MarkingProgressResponseDTO> getMarkingProgress();
+
 
 
 }

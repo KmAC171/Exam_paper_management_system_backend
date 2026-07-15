@@ -4,8 +4,8 @@ package com.exam_paper.backend.repository;
 import com.exam_paper.backend.dto.PacketMovementResponseDTO;
 import com.exam_paper.backend.entity.PacketMovement;
 
-
 import org.springframework.data.jpa.repository.*;
+
 import org.springframework.data.repository.query.Param;
 
 
@@ -14,15 +14,15 @@ import java.util.List;
 
 
 public interface PacketMovementRepository
-        extends JpaRepository<PacketMovement, Long> {
+        extends JpaRepository<PacketMovement,Long>{
 
 
 
     @Query("""
             SELECT new com.exam_paper.backend.dto.PacketMovementResponseDTO(
 
-            fromUser.name,
-            toUser.name,
+            fromUser.fullName,
+            toUser.fullName,
             pm.action,
             pm.timestamp
 
@@ -42,6 +42,5 @@ public interface PacketMovementRepository
     List<PacketMovementResponseDTO> getPacketHistory(
             @Param("packetId") Long packetId
     );
-
 
 }

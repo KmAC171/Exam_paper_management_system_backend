@@ -5,15 +5,12 @@ import com.exam_paper.backend.dto.WorkloadResponseDTO;
 import com.exam_paper.backend.entity.PacketAssignment;
 
 import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
-
 
 import java.util.List;
 
 
-
 public interface PacketAssignmentRepository
-        extends JpaRepository<PacketAssignment, Long> {
+        extends JpaRepository<PacketAssignment,Long>{
 
 
 
@@ -21,8 +18,8 @@ public interface PacketAssignmentRepository
             SELECT new com.exam_paper.backend.dto.WorkloadResponseDTO(
 
             u.userId,
-            u.name,
-            r.roleName,
+            u.fullName,
+            u.role,
             COUNT(pa.assignmentId)
 
             )
@@ -31,16 +28,13 @@ public interface PacketAssignmentRepository
 
             JOIN pa.user u
 
-            JOIN u.role r
-
-            WHERE u.department.departmentId=:departmentId
-
-            GROUP BY u.userId,u.name,r.roleName
+            GROUP BY 
+            u.userId,
+            u.fullName,
+            u.role
 
             """)
-    List<WorkloadResponseDTO> getStaffWorkload(
-            @Param("departmentId") Long departmentId
-    );
+    List<WorkloadResponseDTO> getStaffWorkload();
 
 
 }

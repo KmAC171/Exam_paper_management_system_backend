@@ -2,23 +2,20 @@ package com.exam_paper.backend.service;
 
 
 import com.exam_paper.backend.dto.*;
-
 import com.exam_paper.backend.entity.Comment;
 
-
 import java.util.List;
-
 
 
 public interface HodService {
 
 
-    // View all packets in department
-    List<HodPacketResponseDTO> getDepartmentPackets(Long departmentId);
+    // View all packets
+    List<HodPacketResponseDTO> getAllPackets();
 
 
 
-    // View full packet details
+    // View packet details
     PacketDetailsResponseDTO getPacketDetails(Long packetId);
 
 
@@ -29,32 +26,22 @@ public interface HodService {
 
 
     // Search packets
-    List<HodPacketResponseDTO> searchPackets(
-            Long departmentId,
-            String keyword
-    );
+    List<HodPacketResponseDTO> searchPackets(String keyword);
 
 
 
     // Filter packets by status
-    List<HodPacketResponseDTO> filterPackets(
-            Long departmentId,
-            String status
-    );
+    List<HodPacketResponseDTO> filterPackets(String status);
 
 
 
-    // Staff workload
-    List<WorkloadResponseDTO> getWorkload(
-            Long departmentId
-    );
+    // View staff workload
+    List<WorkloadResponseDTO> getStaffWorkload();
 
 
 
-    // Marking progress
-    List<MarkingProgressResponseDTO> getMarkingProgress(
-            Long departmentId
-    );
+    // View marking progress
+    List<MarkingProgressResponseDTO> getMarkingProgress();
 
 
 
@@ -63,7 +50,7 @@ public interface HodService {
 
 
 
-    // View comments
+    // Get comments
     List<Comment> getComments(Long packetId);
 
 }

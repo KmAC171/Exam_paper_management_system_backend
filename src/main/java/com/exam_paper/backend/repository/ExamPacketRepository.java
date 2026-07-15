@@ -11,13 +11,12 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 
-
 public interface ExamPacketRepository
         extends JpaRepository<ExamPacket, Long> {
 
 
-
-    // View all packets in HOD department
+    // View all department packets
+    // (Removed department filtering because User entity has no Department relation)
 
     @Query("""
             SELECT new com.exam_paper.backend.dto.HodPacketResponseDTO(
@@ -27,7 +26,7 @@ public interface ExamPacketRepository
             c.courseName,
             ep.status,
             ep.deadline,
-            u.name,
+            u.fullName,
             ac.semester,
             ac.year
 
@@ -37,22 +36,16 @@ public interface ExamPacketRepository
 
             JOIN ep.course c
 
-            JOIN c.department d
-
             JOIN ep.currentHolder u
 
             JOIN ep.academicCycle ac
 
-            WHERE d.departmentId = :departmentId
-
             """)
-    List<HodPacketResponseDTO> findDepartmentPackets(
-            @Param("departmentId") Long departmentId
-    );
+    List<HodPacketResponseDTO> findAllPackets();
 
 
 
-    // Search packets by course/status
+    // Search packets
 
     @Query("""
             SELECT ep
@@ -61,53 +54,26 @@ public interface ExamPacketRepository
 
             JOIN ep.course c
 
-            JOIN c.department d
-
-            WHERE d.departmentId = :departmentId
-
-            AND
-            (
-            LOWER(c.courseName)
+            WHERE LOWER(c.courseName)
             LIKE LOWER(CONCAT('%',:keyword,'%'))
 
-            OR
-
-            LOWER(ep.status)
+            OR LOWER(ep.status)
             LIKE LOWER(CONCAT('%',:keyword,'%'))
-            )
 
             """)
     List<ExamPacket> searchPackets(
-            @Param("departmentId") Long departmentId,
             @Param("keyword") String keyword
     );
 
 
 
-    // Filter packets by status
+    // Filter by status
 
-    @Query("""
-            SELECT ep
-
-            FROM ExamPacket ep
-
-            JOIN ep.course c
-
-            JOIN c.department d
-
-            WHERE d.departmentId=:departmentId
-
-            AND ep.status=:status
-
-            """)
-    List<ExamPacket> filterByStatus(
-            @Param("departmentId") Long departmentId,
-            @Param("status") String status
-    );
+    List<ExamPacket> findByStatus(String status);
 
 
 
-    // Full packet details
+    // Packet details
 
     @Query("""
             SELECT new com.exam_paper.backend.dto.PacketDetailsResponseDTO(
@@ -120,9 +86,9 @@ public interface ExamPacketRepository
             ac.semester,
             ep.status,
             ep.deadline,
-            holder.name,
-            lecturer.name,
-            moderator.name
+            holder.fullName,
+            lecturer.fullName,
+            moderator.fullName
 
             )
 
@@ -136,9 +102,11 @@ public interface ExamPacketRepository
 
             JOIN ep.currentHolder holder
 
+
             LEFT JOIN PacketAssignment pa1
             ON pa1.packet.packetId = ep.packetId
             AND pa1.assignedRole='Lecturer'
+
 
             LEFT JOIN pa1.user lecturer
 
@@ -146,6 +114,7 @@ public interface ExamPacketRepository
             LEFT JOIN PacketAssignment pa2
             ON pa2.packet.packetId = ep.packetId
             AND pa2.assignedRole='Moderator'
+
 
             LEFT JOIN pa2.user moderator
 
@@ -156,6 +125,5 @@ public interface ExamPacketRepository
     PacketDetailsResponseDTO getPacketDetails(
             @Param("packetId") Long packetId
     );
-
 
 }
