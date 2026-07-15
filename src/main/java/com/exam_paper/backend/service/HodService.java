@@ -34,6 +34,9 @@ public interface HodService {
     List<HodPacketResponseDTO> filterPackets(String status);
 
 
+    List<HodPacketResponseDTO> getPacketsByLecturer(
+            Long lecturerId
+    );
 
     // View staff workload
     List<WorkloadResponseDTO> getStaffWorkload();

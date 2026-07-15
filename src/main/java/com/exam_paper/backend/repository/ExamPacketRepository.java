@@ -1,65 +1,53 @@
 package com.exam_paper.backend.repository;
 
 
-import com.exam_paper.backend.dto.HodPacketResponseDTO;
-import com.exam_paper.backend.dto.PacketDetailsResponseDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 
-import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+
 import java.util.List;
+
 
 
 public interface ExamPacketRepository
         extends JpaRepository<ExamPacket, Long> {
 
 
-    // View all department packets
-    // (Removed department filtering because User entity has no Department relation)
+
+    // Filter packets by status
+    List<ExamPacket> findByStatus(String status);
+
+
+
+
+    // Search packets by:
+    // course name
+    // course code
+    // packet status
+    // lecturer name
+    // moderator name
 
     @Query("""
-            SELECT new com.exam_paper.backend.dto.HodPacketResponseDTO(
+            SELECT DISTINCT p
+            FROM ExamPacket p
+            LEFT JOIN PacketAssignment pa
+                ON pa.packet = p
+            LEFT JOIN pa.user u
+            WHERE 
+            LOWER(p.course.courseName)
+                LIKE LOWER(CONCAT('%', :keyword, '%'))
 
-            ep.packetId,
-            c.courseCode,
-            c.courseName,
-            ep.status,
-            ep.deadline,
-            u.fullName,
-            ac.semester,
-            ac.year
+            OR LOWER(p.course.courseCode)
+                LIKE LOWER(CONCAT('%', :keyword, '%'))
 
-            )
+            OR LOWER(p.status)
+                LIKE LOWER(CONCAT('%', :keyword, '%'))
 
-            FROM ExamPacket ep
-
-            JOIN ep.course c
-
-            JOIN ep.currentHolder u
-
-            JOIN ep.academicCycle ac
-
-            """)
-    List<HodPacketResponseDTO> findAllPackets();
-
-
-
-    // Search packets
-
-    @Query("""
-            SELECT ep
-
-            FROM ExamPacket ep
-
-            JOIN ep.course c
-
-            WHERE LOWER(c.courseName)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
-
-            OR LOWER(ep.status)
-            LIKE LOWER(CONCAT('%',:keyword,'%'))
-
+            OR LOWER(u.fullName)
+                LIKE LOWER(CONCAT('%', :keyword, '%'))
             """)
     List<ExamPacket> searchPackets(
             @Param("keyword") String keyword
@@ -67,63 +55,20 @@ public interface ExamPacketRepository
 
 
 
-    // Filter by status
 
-    List<ExamPacket> findByStatus(String status);
-
-
-
-    // Packet details
-
+    // Get packets assigned to a lecturer
     @Query("""
-            SELECT new com.exam_paper.backend.dto.PacketDetailsResponseDTO(
-
-            ep.packetId,
-            c.courseCode,
-            c.courseName,
-            d.departmentName,
-            ac.year,
-            ac.semester,
-            ep.status,
-            ep.deadline,
-            holder.fullName,
-            lecturer.fullName,
-            moderator.fullName
-
-            )
-
-            FROM ExamPacket ep
-
-            JOIN ep.course c
-
-            JOIN c.department d
-
-            JOIN ep.academicCycle ac
-
-            JOIN ep.currentHolder holder
-
-
-            LEFT JOIN PacketAssignment pa1
-            ON pa1.packet.packetId = ep.packetId
-            AND pa1.assignedRole='Lecturer'
-
-
-            LEFT JOIN pa1.user lecturer
-
-
-            LEFT JOIN PacketAssignment pa2
-            ON pa2.packet.packetId = ep.packetId
-            AND pa2.assignedRole='Moderator'
-
-
-            LEFT JOIN pa2.user moderator
-
-
-            WHERE ep.packetId=:packetId
-
+            SELECT p
+            FROM ExamPacket p
+            JOIN PacketAssignment pa
+                ON pa.packet = p
+            WHERE pa.user.userId = :lecturerId
+            AND pa.assignedRole = 'Lecturer'
             """)
-    PacketDetailsResponseDTO getPacketDetails(
-            @Param("packetId") Long packetId
+    List<ExamPacket> findPacketsAssignedToLecturer(
+            @Param("lecturerId") Long lecturerId
     );
+
+
 
 }

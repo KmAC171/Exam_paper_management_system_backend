@@ -3,7 +3,7 @@ package com.exam_paper.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
+import java.util.List;
 import java.time.LocalDate;
 
 
@@ -42,5 +42,7 @@ public class ExamPacket {
     @JoinColumn(name = "current_holder_id")
     private User currentHolder;
 
+    @OneToMany(mappedBy = "packet")
+    private List<PacketAssignment> assignments;
 
 }

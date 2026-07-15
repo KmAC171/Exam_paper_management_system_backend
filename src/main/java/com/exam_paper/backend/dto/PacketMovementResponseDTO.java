@@ -1,5 +1,6 @@
 package com.exam_paper.backend.dto;
 
+
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -11,6 +12,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class PacketMovementResponseDTO {
 
+
+    private Long movementId;
 
     private String fromUser;
 
