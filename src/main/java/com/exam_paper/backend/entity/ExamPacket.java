@@ -32,15 +32,8 @@ public class ExamPacket {
     @JoinColumn(name = "status_id")
     private PacketStatus status;
 
-    @ManyToOne
-    @JoinColumn(name = "semester_id")
-    private Semester semester;
-
-    @ManyToOne
-    @JoinColumn(name = "current_holder_id")
-    private User currentHolder;
-
-
-
     private LocalDate deadline;
+
+    public void setCurrentHolder(User moderator) {
+    }
 }
