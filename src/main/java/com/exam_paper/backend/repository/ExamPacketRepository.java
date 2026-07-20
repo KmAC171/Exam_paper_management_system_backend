@@ -22,7 +22,7 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
         d.department_name AS departmentName,
         COUNT(p.packet_id) AS submitted,
         SUM(CASE WHEN ps.status_name = 'APPROVED' THEN 1 ELSE 0 END) AS approved,
-        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < :today THEN 1 ELSE 0 END) AS delayed
+        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < :today THEN 1 ELSE 0 END) AS `delayed`
     FROM exam_packets p
     JOIN courses c ON p.course_id = c.course_id
     JOIN departments d ON c.department_id = d.department_id
@@ -30,4 +30,5 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     GROUP BY d.department_id, d.department_name
     """, nativeQuery = true)
     List<DepartmentStatsProjection> getDepartmentStats(@Param("today") LocalDate today);
+
 }

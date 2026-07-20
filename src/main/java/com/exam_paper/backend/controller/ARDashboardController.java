@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ARDashboardController {
     private final ARDashboardService arDashboardService;
 
-    @GetMapping("/summary")
+    @GetMapping("/summaryd")
     public DashboardSummaryDTO getSummary() {
         return arDashboardService.getSummary();
     }

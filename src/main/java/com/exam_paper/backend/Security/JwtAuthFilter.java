@@ -27,10 +27,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
+        System.out.println(">>> AUTH HEADER: " + authHeader);
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
+            System.out.println(">>> IS BLACKLISTED: " + tokenBlacklistService.isBlacklisted(token));
+            System.out.println(">>> IS VALID: " + jwtUtill.validateToken(token));
 
             if (tokenBlacklistService.isBlacklisted(token)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -41,15 +45,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (jwtUtill.validateToken(token)) {
                 String username = jwtUtill.extractUsername(token);
                 String role = jwtUtill.extractRole(token);
+                System.out.println(">>> USERNAME: " + username);
+                System.out.println(">>> ROLE: " + role);
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         username, null, List.of(new SimpleGrantedAuthority(role))
                 );
-
                 authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
-
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }

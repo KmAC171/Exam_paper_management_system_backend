@@ -14,7 +14,7 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
 
-    @GetMapping("/summaryd")
+    @GetMapping("/summary")
     public DashboardResponseDTO getDashboard() {
         return dashboardService.getDashboard();
     }
