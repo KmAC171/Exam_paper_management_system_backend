@@ -18,7 +18,8 @@ public class ARDashboardService {
         long approved = examPacketRepository.countByStatus_StatusName("APPROVED");
         long printingQueue = examPacketRepository.countByStatus_StatusName("PRINTING_QUEUE");
         long delayed = examPacketRepository.countDelayed(LocalDate.now());
+        long underModeration = examPacketRepository.countByStatus_StatusName("UNDER_MODERATION");
 
-        return new DashboardSummaryDTO(total, pending, approved, delayed, printingQueue);
+        return new DashboardSummaryDTO(total, pending, approved, delayed, printingQueue, underModeration);
     }
 }

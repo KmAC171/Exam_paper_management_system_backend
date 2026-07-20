@@ -7,11 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DashboardSummaryDTO {
-    private long totalPackets;
-    private long pending;
+public class DepartmentStatsDto {
+    private String departmentName;
+    private long submitted;  // total packets in that department
     private long approved;
     private long delayed;
-    private long printingQueue;
-    private long underModeration;
 }
