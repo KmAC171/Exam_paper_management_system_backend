@@ -31,4 +31,15 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     """, nativeQuery = true)
     List<DepartmentStatsProjection> getDepartmentStats(@Param("today") LocalDate today);
 
+    @Query(value = """
+    SELECT 
+        MONTH(p.deadline) AS month,
+        COUNT(*) AS count
+    FROM exam_packets p
+    WHERE YEAR(p.deadline) = YEAR(CURDATE())
+    GROUP BY MONTH(p.deadline)
+    ORDER BY MONTH(p.deadline)
+    """, nativeQuery = true)
+    List<SubmissionTrendProjection> getSubmissionTrend();
+
 }
