@@ -12,4 +12,6 @@ import java.util.List;
 public class DashboardResponseDTO {
     private DashboardSummaryDTO summary;
     private List<DepartmentStatsDto> departmentStats;
+    private List<SubmissionTrendDTO> submissionTrend;
+    private List<ActivityLogDTO> recentActivity;
 }
