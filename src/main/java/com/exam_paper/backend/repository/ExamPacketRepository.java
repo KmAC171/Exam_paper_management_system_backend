@@ -289,7 +289,57 @@ public interface ExamPacketRepository
 
             """)
     List<Object[]> getStaffPerformance();
+// =====================================
+// Report statistics
+// =====================================
 
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM ExamPacket p
+        """)
+    Long countTotalPackets();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM ExamPacket p
+        WHERE p.status='Completed'
+        """)
+    Long countCompletedPackets();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM ExamPacket p
+        WHERE p.status='Pending'
+        """)
+    Long countPendingPackets();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM ExamPacket p
+        WHERE p.status='In Progress'
+        """)
+    Long countInProgressPackets();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+        FROM ExamPacket p
+        WHERE p.deadline < CURRENT_DATE
+        AND p.status <> 'Completed'
+        """)
+    Long countOverduePackets();
 
 
 }
