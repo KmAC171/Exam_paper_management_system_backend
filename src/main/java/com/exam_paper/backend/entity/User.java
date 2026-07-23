@@ -12,6 +12,12 @@ import lombok.*;
 @Builder
 public class User {
 
+    public enum Role {
+        ROLE_ADMIN,
+        ROLE_MODERATOR,
+        ROLE_USER
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
@@ -19,9 +25,14 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
+    @Column(nullable = false)
     private String fullName;
 
+    @Column(nullable = false)
     private String password;
 
-    private String role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Role role = Role.ROLE_USER;
 }
