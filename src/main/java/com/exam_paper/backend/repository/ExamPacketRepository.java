@@ -17,18 +17,89 @@ public interface ExamPacketRepository
 
 
 
-    // Filter packets by status
+    // =====================================
+    // Filter packets by status (existing)
+    // =====================================
+
     List<ExamPacket> findByStatus(String status);
 
 
 
 
-    // Search packets by:
-    // course name
-    // course code
-    // packet status
-    // lecturer name
-    // moderator name
+
+    // =====================================
+    // Advanced packet filtering
+    // status + academic cycle + lecturer + moderator
+    // =====================================
+
+    @Query("""
+            SELECT DISTINCT p
+            FROM ExamPacket p
+
+            LEFT JOIN PacketAssignment pa
+                ON pa.packet = p
+
+            LEFT JOIN pa.user u
+
+
+            WHERE
+
+            (:status IS NULL 
+                OR p.status = :status)
+
+
+            AND
+
+            (:cycleId IS NULL 
+                OR p.academicCycle.cycleId = :cycleId)
+
+
+            AND
+
+            (:lecturerId IS NULL
+                OR (
+                    pa.assignedRole = 'Lecturer'
+                    AND u.userId = :lecturerId
+                )
+            )
+
+
+            AND
+
+            (:moderatorId IS NULL
+                OR (
+                    pa.assignedRole = 'Moderator'
+                    AND u.userId = :moderatorId
+                )
+            )
+
+            """)
+    List<ExamPacket> filterPackets(
+
+            @Param("status")
+            String status,
+
+
+            @Param("cycleId")
+            Long cycleId,
+
+
+            @Param("lecturerId")
+            Long lecturerId,
+
+
+            @Param("moderatorId")
+            Long moderatorId
+
+    );
+
+
+
+
+
+    // =====================================
+    // Search packets
+    // =====================================
 
     @Query("""
             SELECT DISTINCT p
@@ -56,7 +127,11 @@ public interface ExamPacketRepository
 
 
 
-    // Get packets assigned to a lecturer
+
+    // =====================================
+    // Get packets assigned to lecturer
+    // =====================================
+
     @Query("""
             SELECT p
             FROM ExamPacket p
@@ -68,7 +143,6 @@ public interface ExamPacketRepository
     List<ExamPacket> findPacketsAssignedToLecturer(
             @Param("lecturerId") Long lecturerId
     );
-
 
 
 }

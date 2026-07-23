@@ -446,4 +446,36 @@ public class HodServiceImpl {
 
     }
 
+
+    // =====================================
+// Advanced packet filtering
+// =====================================
+
+    public List<HodPacketResponseDTO> filterPackets(
+            PacketFilterDTO filter
+    ){
+
+
+        return examPacketRepository
+
+                .filterPackets(
+
+                        filter.getStatus(),
+
+                        filter.getCycleId(),
+
+                        filter.getLecturerId(),
+
+                        filter.getModeratorId()
+
+                )
+
+
+                .stream()
+
+                .map(this::convertToDTO)
+
+                .toList();
+
+    }
 }

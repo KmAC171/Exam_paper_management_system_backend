@@ -50,7 +50,7 @@ public class HodController {
 
 
     // ===============================
-    // View full packet details
+    // Packet details
     // ===============================
 
     @GetMapping("/packets/{packetId}")
@@ -72,7 +72,7 @@ public class HodController {
 
 
     // ===============================
-    // View packet movement history
+    // Packet history
     // ===============================
 
     @GetMapping("/packets/{packetId}/history")
@@ -94,7 +94,7 @@ public class HodController {
 
 
     // ===============================
-    // Search packets
+    // Search
     // ===============================
 
     @GetMapping("/packets/search")
@@ -116,39 +116,17 @@ public class HodController {
 
 
     // ===============================
-    // Filter packets by status
+    // NEW ADVANCED FILTER
     // ===============================
 
     @GetMapping("/packets/filter")
     public ResponseEntity<List<HodPacketResponseDTO>> filterPackets(
-            @RequestParam String status
+            PacketFilterDTO filter
     ){
 
 
         return ResponseEntity.ok(
-                hodService.filterPackets(status)
-        );
-
-    }
-
-
-
-
-
-
-
-    // ===============================
-    // View packets assigned to lecturer
-    // ===============================
-
-    @GetMapping("/packets/lecturer/{lecturerId}")
-    public ResponseEntity<List<HodPacketResponseDTO>> getPacketsByLecturer(
-            @PathVariable Long lecturerId
-    ){
-
-
-        return ResponseEntity.ok(
-                hodService.getPacketsByLecturer(lecturerId)
+                hodService.filterPackets(filter)
         );
 
     }
@@ -200,7 +178,7 @@ public class HodController {
 
 
     // ===============================
-    // Add comment
+    // Comments
     // ===============================
 
     @PostMapping("/comments")
@@ -218,12 +196,6 @@ public class HodController {
 
 
 
-
-
-
-    // ===============================
-    // View communication history
-    // ===============================
 
     @GetMapping("/comments/{packetId}")
     public ResponseEntity<List<Comment>> getComments(
@@ -244,8 +216,7 @@ public class HodController {
 
 
     // ===============================
-    // NEW FEATURE
-    // View last updated user
+    // Last updated user
     // ===============================
 
     @GetMapping("/packets/{packetId}/last-updated-user")
