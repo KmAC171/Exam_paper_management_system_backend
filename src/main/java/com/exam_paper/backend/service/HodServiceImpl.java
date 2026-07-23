@@ -575,4 +575,48 @@ public class HodServiceImpl {
                 .toList();
 
     }
+
+    // =====================================
+// Staff Performance Statistics
+// =====================================
+
+
+    public List<StaffPerformanceResponseDTO>
+    getStaffPerformance(){
+
+
+        return examPacketRepository
+                .getStaffPerformance()
+
+                .stream()
+
+                .map(row -> new StaffPerformanceResponseDTO(
+
+                        ((Number)row[0])
+                                .longValue(),
+
+
+                        (String)row[1],
+
+
+                        (String)row[2],
+
+
+                        ((Number)row[3])
+                                .longValue(),
+
+
+                        ((Number)row[4])
+                                .longValue(),
+
+
+                        ((Number)row[5])
+                                .longValue()
+
+                ))
+
+                .toList();
+
+
+    }
 }

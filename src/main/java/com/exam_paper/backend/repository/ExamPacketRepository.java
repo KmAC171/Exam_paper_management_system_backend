@@ -18,7 +18,7 @@ public interface ExamPacketRepository
 
 
     // =====================================
-    // Filter packets by status
+    // Filter by status
     // =====================================
 
     List<ExamPacket> findByStatus(String status);
@@ -27,9 +27,9 @@ public interface ExamPacketRepository
 
 
 
+
     // =====================================
-    // Advanced packet filtering
-    // status + academic cycle + lecturer + moderator
+    // Advanced filtering
     // =====================================
 
     @Query("""
@@ -41,37 +41,34 @@ public interface ExamPacketRepository
 
             LEFT JOIN pa.user u
 
-
             WHERE
 
             (:status IS NULL
-                OR p.status = :status)
+            OR p.status = :status)
 
 
             AND
 
             (:cycleId IS NULL
-                OR p.academicCycle.cycleId = :cycleId)
+            OR p.academicCycle.cycleId = :cycleId)
 
 
             AND
 
             (:lecturerId IS NULL
-                OR (
-                    pa.assignedRole = 'Lecturer'
-                    AND u.userId = :lecturerId
-                )
-            )
+            OR (
+                pa.assignedRole = 'Lecturer'
+                AND u.userId = :lecturerId
+            ))
 
 
             AND
 
             (:moderatorId IS NULL
-                OR (
-                    pa.assignedRole = 'Moderator'
-                    AND u.userId = :moderatorId
-                )
-            )
+            OR (
+                pa.assignedRole = 'Moderator'
+                AND u.userId = :moderatorId
+            ))
 
             """)
     List<ExamPacket> filterPackets(
@@ -79,14 +76,11 @@ public interface ExamPacketRepository
             @Param("status")
             String status,
 
-
             @Param("cycleId")
             Long cycleId,
 
-
             @Param("lecturerId")
             Long lecturerId,
-
 
             @Param("moderatorId")
             Long moderatorId
@@ -98,12 +92,9 @@ public interface ExamPacketRepository
 
 
 
+
     // =====================================
     // Search packets
-    // course name
-    // course code
-    // status
-    // lecturer/moderator name
     // =====================================
 
     @Query("""
@@ -115,30 +106,27 @@ public interface ExamPacketRepository
 
             LEFT JOIN pa.user u
 
-
             WHERE
 
             LOWER(p.course.courseName)
-                LIKE LOWER(CONCAT('%', :keyword, '%'))
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
 
 
             OR LOWER(p.course.courseCode)
-                LIKE LOWER(CONCAT('%', :keyword, '%'))
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
 
 
             OR LOWER(p.status)
-                LIKE LOWER(CONCAT('%', :keyword, '%'))
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
 
 
             OR LOWER(u.fullName)
-                LIKE LOWER(CONCAT('%', :keyword, '%'))
+            LIKE LOWER(CONCAT('%',:keyword,'%'))
 
             """)
     List<ExamPacket> searchPackets(
-
             @Param("keyword")
             String keyword
-
     );
 
 
@@ -147,8 +135,9 @@ public interface ExamPacketRepository
 
 
 
+
     // =====================================
-    // Get packets assigned to lecturer
+    // Lecturer packets
     // =====================================
 
     @Query("""
@@ -156,11 +145,11 @@ public interface ExamPacketRepository
             FROM ExamPacket p
 
             JOIN PacketAssignment pa
-                ON pa.packet = p
+            ON pa.packet = p
 
             WHERE pa.user.userId = :lecturerId
 
-            AND pa.assignedRole = 'Lecturer'
+            AND pa.assignedRole='Lecturer'
 
             """)
     List<ExamPacket> findPacketsAssignedToLecturer(
@@ -178,13 +167,11 @@ public interface ExamPacketRepository
 
 
     // =====================================
-    // Previous academic cycle packets
+    // Previous academic records
     // =====================================
 
     List<ExamPacket> findByAcademicCycleCycleId(
-
             Long cycleId
-
     );
 
 
@@ -196,9 +183,6 @@ public interface ExamPacketRepository
 
     // =====================================
     // Overdue packets
-    //
-    // deadline passed
-    // status is not completed
     // =====================================
 
     @Query("""
@@ -221,9 +205,6 @@ public interface ExamPacketRepository
 
     // =====================================
     // Delayed packets
-    //
-    // deadline passed
-    // still pending/in progress
     // =====================================
 
     @Query("""
@@ -233,15 +214,81 @@ public interface ExamPacketRepository
             WHERE p.deadline < CURRENT_DATE
 
             AND (
-                p.status = 'Pending'
+                p.status='Pending'
 
                 OR
 
-                p.status = 'In Progress'
+                p.status='In Progress'
             )
 
             """)
     List<ExamPacket> findDelayedPackets();
+
+
+
+
+
+
+
+
+    // =====================================
+    // Staff Performance Statistics
+    // =====================================
+
+    @Query("""
+            SELECT
+
+            pa.user.userId,
+
+            pa.user.fullName,
+
+            pa.assignedRole,
+
+
+            SUM(
+                CASE
+                WHEN p.status='Completed'
+                THEN 1
+                ELSE 0
+                END
+            ),
+
+
+            SUM(
+                CASE
+                WHEN p.status='Pending'
+                THEN 1
+                ELSE 0
+                END
+            ),
+
+
+            SUM(
+                CASE
+                WHEN p.deadline < CURRENT_DATE
+                AND p.status <> 'Completed'
+                THEN 1
+                ELSE 0
+                END
+            )
+
+
+            FROM PacketAssignment pa
+
+
+            JOIN pa.packet p
+
+
+            GROUP BY
+
+            pa.user.userId,
+
+            pa.user.fullName,
+
+            pa.assignedRole
+
+            """)
+    List<Object[]> getStaffPerformance();
 
 
 

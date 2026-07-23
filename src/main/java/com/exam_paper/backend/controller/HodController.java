@@ -328,6 +328,22 @@ public class HodController {
         );
 
     }
+// =====================================
+// Staff Performance Statistics
+// =====================================
 
+
+    @GetMapping("/staff-performance")
+    public ResponseEntity<List<StaffPerformanceResponseDTO>>
+    getStaffPerformance(){
+
+
+        return ResponseEntity.ok(
+
+                hodService.getStaffPerformance()
+
+        );
+
+    }
 
 }
