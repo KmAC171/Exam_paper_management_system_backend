@@ -29,6 +29,8 @@ public class HodController {
 
 
 
+
+
     // ===============================
     // View all packets
     // ===============================
@@ -50,10 +52,10 @@ public class HodController {
 
 
     // ===============================
-    // Packet details
+    // View packet details
     // ===============================
 
-    @GetMapping("/packets/{packetId}")
+    @GetMapping("/packets/id/{packetId}")
     public ResponseEntity<PacketDetailsResponseDTO> getPacketDetails(
             @PathVariable Long packetId
     ){
@@ -72,10 +74,10 @@ public class HodController {
 
 
     // ===============================
-    // Packet history
+    // View packet movement history
     // ===============================
 
-    @GetMapping("/packets/{packetId}/history")
+    @GetMapping("/packets/id/{packetId}/history")
     public ResponseEntity<List<PacketMovementResponseDTO>> getPacketHistory(
             @PathVariable Long packetId
     ){
@@ -94,7 +96,7 @@ public class HodController {
 
 
     // ===============================
-    // Search
+    // Search packets
     // ===============================
 
     @GetMapping("/packets/search")
@@ -116,7 +118,11 @@ public class HodController {
 
 
     // ===============================
-    // NEW ADVANCED FILTER
+    // Advanced packet filter
+    // status
+    // academic cycle
+    // lecturer
+    // moderator
     // ===============================
 
     @GetMapping("/packets/filter")
@@ -178,7 +184,7 @@ public class HodController {
 
 
     // ===============================
-    // Comments
+    // Add comment
     // ===============================
 
     @PostMapping("/comments")
@@ -196,6 +202,12 @@ public class HodController {
 
 
 
+
+
+
+    // ===============================
+    // View communication history
+    // ===============================
 
     @GetMapping("/comments/{packetId}")
     public ResponseEntity<List<Comment>> getComments(
@@ -219,7 +231,7 @@ public class HodController {
     // Last updated user
     // ===============================
 
-    @GetMapping("/packets/{packetId}/last-updated-user")
+    @GetMapping("/packets/id/{packetId}/last-updated-user")
     public ResponseEntity<LastUpdatedUserResponseDTO> getLastUpdatedUser(
             @PathVariable Long packetId
     ){
@@ -231,9 +243,15 @@ public class HodController {
 
     }
 
+
+
+
+
+
+
     // =====================================
-// Previous academic cycles
-// =====================================
+    // Previous academic cycles
+    // =====================================
 
     @GetMapping("/academic-cycles/previous")
     public ResponseEntity<List<AcademicCycleResponseDTO>>
@@ -245,9 +263,16 @@ public class HodController {
         );
 
     }
+
+
+
+
+
+
+
     // =====================================
-// Previous cycle packet records
-// =====================================
+    // Previous academic cycle packets
+    // =====================================
 
     @GetMapping("/packets/previous/{cycleId}")
     public ResponseEntity<List<HodPacketResponseDTO>>
@@ -258,6 +283,48 @@ public class HodController {
 
         return ResponseEntity.ok(
                 hodService.getPreviousCyclePackets(cycleId)
+        );
+
+    }
+
+
+
+
+
+
+
+    // =====================================
+    // Overdue packets
+    // =====================================
+
+    @GetMapping("/packets/overdue")
+    public ResponseEntity<List<HodPacketResponseDTO>>
+    getOverduePackets(){
+
+
+        return ResponseEntity.ok(
+                hodService.getOverduePackets()
+        );
+
+    }
+
+
+
+
+
+
+
+    // =====================================
+    // Delayed packets
+    // =====================================
+
+    @GetMapping("/packets/delayed")
+    public ResponseEntity<List<HodPacketResponseDTO>>
+    getDelayedPackets(){
+
+
+        return ResponseEntity.ok(
+                hodService.getDelayedPackets()
         );
 
     }

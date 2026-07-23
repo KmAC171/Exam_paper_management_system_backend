@@ -539,4 +539,40 @@ public class HodServiceImpl {
                 .toList();
 
     }
+
+    // =====================================
+// View overdue packets
+// =====================================
+
+    public List<HodPacketResponseDTO> getOverduePackets(){
+
+
+        return examPacketRepository
+                .findOverduePackets()
+
+                .stream()
+
+                .map(this::convertToDTO)
+
+                .toList();
+
+    }
+
+    // =====================================
+// View delayed packets
+// =====================================
+
+    public List<HodPacketResponseDTO> getDelayedPackets(){
+
+
+        return examPacketRepository
+                .findDelayedPackets()
+
+                .stream()
+
+                .map(this::convertToDTO)
+
+                .toList();
+
+    }
 }

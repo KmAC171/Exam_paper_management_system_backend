@@ -18,7 +18,7 @@ public interface ExamPacketRepository
 
 
     // =====================================
-    // Filter packets by status (existing)
+    // Filter packets by status
     // =====================================
 
     List<ExamPacket> findByStatus(String status);
@@ -44,13 +44,13 @@ public interface ExamPacketRepository
 
             WHERE
 
-            (:status IS NULL 
+            (:status IS NULL
                 OR p.status = :status)
 
 
             AND
 
-            (:cycleId IS NULL 
+            (:cycleId IS NULL
                 OR p.academicCycle.cycleId = :cycleId)
 
 
@@ -97,32 +97,51 @@ public interface ExamPacketRepository
 
 
 
+
     // =====================================
     // Search packets
+    // course name
+    // course code
+    // status
+    // lecturer/moderator name
     // =====================================
 
     @Query("""
             SELECT DISTINCT p
             FROM ExamPacket p
+
             LEFT JOIN PacketAssignment pa
                 ON pa.packet = p
+
             LEFT JOIN pa.user u
-            WHERE 
+
+
+            WHERE
+
             LOWER(p.course.courseName)
                 LIKE LOWER(CONCAT('%', :keyword, '%'))
+
 
             OR LOWER(p.course.courseCode)
                 LIKE LOWER(CONCAT('%', :keyword, '%'))
 
+
             OR LOWER(p.status)
                 LIKE LOWER(CONCAT('%', :keyword, '%'))
 
+
             OR LOWER(u.fullName)
                 LIKE LOWER(CONCAT('%', :keyword, '%'))
+
             """)
     List<ExamPacket> searchPackets(
-            @Param("keyword") String keyword
+
+            @Param("keyword")
+            String keyword
+
     );
+
+
 
 
 
@@ -135,22 +154,95 @@ public interface ExamPacketRepository
     @Query("""
             SELECT p
             FROM ExamPacket p
+
             JOIN PacketAssignment pa
                 ON pa.packet = p
+
             WHERE pa.user.userId = :lecturerId
+
             AND pa.assignedRole = 'Lecturer'
+
             """)
     List<ExamPacket> findPacketsAssignedToLecturer(
-            @Param("lecturerId") Long lecturerId
+
+            @Param("lecturerId")
+            Long lecturerId
+
     );
+
+
+
+
+
+
+
 
     // =====================================
-// Previous academic cycle packets
-// =====================================
+    // Previous academic cycle packets
+    // =====================================
 
     List<ExamPacket> findByAcademicCycleCycleId(
+
             Long cycleId
+
     );
+
+
+
+
+
+
+
+
+    // =====================================
+    // Overdue packets
+    //
+    // deadline passed
+    // status is not completed
+    // =====================================
+
+    @Query("""
+            SELECT p
+            FROM ExamPacket p
+
+            WHERE p.deadline < CURRENT_DATE
+
+            AND p.status <> 'Completed'
+
+            """)
+    List<ExamPacket> findOverduePackets();
+
+
+
+
+
+
+
+
+    // =====================================
+    // Delayed packets
+    //
+    // deadline passed
+    // still pending/in progress
+    // =====================================
+
+    @Query("""
+            SELECT p
+            FROM ExamPacket p
+
+            WHERE p.deadline < CURRENT_DATE
+
+            AND (
+                p.status = 'Pending'
+
+                OR
+
+                p.status = 'In Progress'
+            )
+
+            """)
+    List<ExamPacket> findDelayedPackets();
+
 
 
 }
