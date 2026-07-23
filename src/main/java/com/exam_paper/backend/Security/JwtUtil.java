@@ -1,7 +1,5 @@
 package com.exam_paper.backend.Security;
 
-
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -14,16 +12,22 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:changeitchangeitchangeitchangeit}")
+    @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration:86400000}")
+    @Value("${jwt.expiration}")
     private long expiration;
 
+    /**
+     * Generate the signing key from the secret.
+     */
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
+    /**
+     * Generate a JWT token for the given username.
+     */
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
@@ -33,6 +37,9 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * Extract the username from the JWT token.
+     */
     public String extractUsername(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -42,6 +49,9 @@ public class JwtUtil {
                 .getSubject();
     }
 
+    /**
+     * Check whether the token is valid.
+     */
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -49,7 +59,7 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(token);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (Exception e) {
             return false;
         }
     }
