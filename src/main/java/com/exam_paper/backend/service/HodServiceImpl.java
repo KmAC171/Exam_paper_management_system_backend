@@ -2,8 +2,7 @@ package com.exam_paper.backend.service;
 
 
 import com.exam_paper.backend.dto.*;
-import com.exam_paper.backend.entity.Comment;
-import com.exam_paper.backend.entity.ExamPacket;
+import com.exam_paper.backend.entity.*;
 
 import com.exam_paper.backend.repository.*;
 
@@ -18,8 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class HodServiceImpl implements HodService {
-
+public class HodServiceImpl {
 
 
     private final ExamPacketRepository examPacketRepository;
@@ -32,14 +30,15 @@ public class HodServiceImpl implements HodService {
 
     private final MarkingRepository markingRepository;
 
+    private final AuditLogRepository auditLogRepository;
 
 
 
-
+    // ===============================
     // View all packets
+    // ===============================
 
-    @Override
-    public List<HodPacketResponseDTO> getAllPackets() {
+    public List<HodPacketResponseDTO> getAllPackets(){
 
 
         return examPacketRepository
@@ -52,22 +51,24 @@ public class HodServiceImpl implements HodService {
 
 
 
+    // ===============================
+    // View packet details
+    // ===============================
 
-
-
-    // View full packet details
-
-    @Override
-    public PacketDetailsResponseDTO getPacketDetails(Long packetId) {
+    public PacketDetailsResponseDTO getPacketDetails(
+            Long packetId
+    ){
 
 
         ExamPacket packet =
                 examPacketRepository
                         .findById(packetId)
                         .orElseThrow(
-                                () -> new RuntimeException("Packet not found")
+                                () ->
+                                        new RuntimeException(
+                                                "Packet not found"
+                                        )
                         );
-
 
 
         return new PacketDetailsResponseDTO(
@@ -109,13 +110,13 @@ public class HodServiceImpl implements HodService {
 
 
 
+    // ===============================
+    // Packet movement history
+    // ===============================
 
-
-
-    // View movement history
-
-    @Override
-    public List<PacketMovementResponseDTO> getPacketHistory(Long packetId) {
+    public List<PacketMovementResponseDTO> getPacketHistory(
+            Long packetId
+    ){
 
 
         return packetMovementRepository
@@ -149,11 +150,10 @@ public class HodServiceImpl implements HodService {
 
 
 
-
-
+    // ===============================
     // Search packets
+    // ===============================
 
-    @Override
     public List<HodPacketResponseDTO> searchPackets(
             String keyword
     ){
@@ -176,11 +176,10 @@ public class HodServiceImpl implements HodService {
 
 
 
+    // ===============================
+    // Filter packets
+    // ===============================
 
-
-    // Filter by status
-
-    @Override
     public List<HodPacketResponseDTO> filterPackets(
             String status
     ){
@@ -195,7 +194,6 @@ public class HodServiceImpl implements HodService {
 
                 .toList();
 
-
     }
 
 
@@ -204,11 +202,10 @@ public class HodServiceImpl implements HodService {
 
 
 
+    // ===============================
+    // Lecturer packets
+    // ===============================
 
-
-    // View packets assigned to lecturer
-
-    @Override
     public List<HodPacketResponseDTO> getPacketsByLecturer(
             Long lecturerId
     ){
@@ -223,7 +220,6 @@ public class HodServiceImpl implements HodService {
 
                 .toList();
 
-
     }
 
 
@@ -232,18 +228,16 @@ public class HodServiceImpl implements HodService {
 
 
 
-
-
+    // ===============================
     // Staff workload
+    // ===============================
 
-    @Override
     public List<WorkloadResponseDTO> getStaffWorkload(){
 
 
         return packetAssignmentRepository
                 .getStaffWorkload();
 
-
     }
 
 
@@ -252,18 +246,16 @@ public class HodServiceImpl implements HodService {
 
 
 
-
-
+    // ===============================
     // Marking progress
+    // ===============================
 
-    @Override
     public List<MarkingProgressResponseDTO> getMarkingProgress(){
 
 
         return markingRepository
                 .getMarkingProgress();
 
-
     }
 
 
@@ -272,17 +264,17 @@ public class HodServiceImpl implements HodService {
 
 
 
-
-
+    // ===============================
     // Add comment
+    // ===============================
 
-    @Override
-    public Comment addComment(Comment comment){
+    public Comment addComment(
+            Comment comment
+    ){
 
 
         return commentRepository.save(comment);
 
-
     }
 
 
@@ -291,11 +283,10 @@ public class HodServiceImpl implements HodService {
 
 
 
+    // ===============================
+    // View comments
+    // ===============================
 
-
-    // Communication history
-
-    @Override
     public List<Comment> getComments(
             Long packetId
     ){
@@ -304,10 +295,62 @@ public class HodServiceImpl implements HodService {
         return commentRepository
                 .findByPacketPacketIdOrderByTimestampDesc(packetId);
 
-
     }
 
 
+
+
+
+
+
+
+    // ===============================
+    // NEW FEATURE
+    // Last updated user
+    // ===============================
+
+
+    public LastUpdatedUserResponseDTO getLastUpdatedUser(
+            Long packetId
+    ){
+
+
+        AuditLog auditLog =
+                auditLogRepository
+                        .findTopByPacketPacketIdOrderByTimestampDesc(packetId)
+
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "No audit record found"
+                                        )
+                        );
+
+
+
+        return LastUpdatedUserResponseDTO.builder()
+
+                .userId(
+                        auditLog.getUser()
+                                .getUserId()
+                )
+
+                .userName(
+                        auditLog.getUser()
+                                .getFullName()
+                )
+
+                .action(
+                        auditLog.getAction()
+                )
+
+                .updatedAt(
+                        auditLog.getTimestamp()
+                )
+
+                .build();
+
+    }
 
 
 
@@ -351,10 +394,6 @@ public class HodServiceImpl implements HodService {
 
 
 
-
-
-
-
     private String getAssignedLecturer(
             ExamPacket packet
     ){
@@ -375,15 +414,9 @@ public class HodServiceImpl implements HodService {
                 )
 
                 .findFirst()
-
                 .orElse("Not Assigned");
 
-
     }
-
-
-
-
 
 
 
@@ -409,11 +442,8 @@ public class HodServiceImpl implements HodService {
                 )
 
                 .findFirst()
-
                 .orElse("Not Assigned");
 
-
     }
-
 
 }

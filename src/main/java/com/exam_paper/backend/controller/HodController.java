@@ -3,7 +3,7 @@ package com.exam_paper.backend.controller;
 
 import com.exam_paper.backend.dto.*;
 import com.exam_paper.backend.entity.Comment;
-import com.exam_paper.backend.service.HodService;
+import com.exam_paper.backend.service.HodServiceImpl;
 
 
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class HodController {
 
 
 
-    private final HodService hodService;
+    private final HodServiceImpl hodService;
 
 
 
@@ -42,6 +42,8 @@ public class HodController {
         );
 
     }
+
+
 
 
 
@@ -67,6 +69,8 @@ public class HodController {
 
 
 
+
+
     // ===============================
     // View packet movement history
     // ===============================
@@ -82,6 +86,8 @@ public class HodController {
         );
 
     }
+
+
 
 
 
@@ -107,8 +113,10 @@ public class HodController {
 
 
 
+
+
     // ===============================
-    // Filter packets
+    // Filter packets by status
     // ===============================
 
     @GetMapping("/packets/filter")
@@ -122,6 +130,30 @@ public class HodController {
         );
 
     }
+
+
+
+
+
+
+
+    // ===============================
+    // View packets assigned to lecturer
+    // ===============================
+
+    @GetMapping("/packets/lecturer/{lecturerId}")
+    public ResponseEntity<List<HodPacketResponseDTO>> getPacketsByLecturer(
+            @PathVariable Long lecturerId
+    ){
+
+
+        return ResponseEntity.ok(
+                hodService.getPacketsByLecturer(lecturerId)
+        );
+
+    }
+
+
 
 
 
@@ -145,6 +177,8 @@ public class HodController {
 
 
 
+
+
     // ===============================
     // Marking progress
     // ===============================
@@ -158,6 +192,8 @@ public class HodController {
         );
 
     }
+
+
 
 
 
@@ -183,8 +219,10 @@ public class HodController {
 
 
 
+
+
     // ===============================
-    // View comments
+    // View communication history
     // ===============================
 
     @GetMapping("/comments/{packetId}")
@@ -195,6 +233,29 @@ public class HodController {
 
         return ResponseEntity.ok(
                 hodService.getComments(packetId)
+        );
+
+    }
+
+
+
+
+
+
+
+    // ===============================
+    // NEW FEATURE
+    // View last updated user
+    // ===============================
+
+    @GetMapping("/packets/{packetId}/last-updated-user")
+    public ResponseEntity<LastUpdatedUserResponseDTO> getLastUpdatedUser(
+            @PathVariable Long packetId
+    ){
+
+
+        return ResponseEntity.ok(
+                hodService.getLastUpdatedUser(packetId)
         );
 
     }
