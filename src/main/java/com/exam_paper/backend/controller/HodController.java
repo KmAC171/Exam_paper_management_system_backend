@@ -231,5 +231,36 @@ public class HodController {
 
     }
 
+    // =====================================
+// Previous academic cycles
+// =====================================
+
+    @GetMapping("/academic-cycles/previous")
+    public ResponseEntity<List<AcademicCycleResponseDTO>>
+    getPreviousCycles(){
+
+
+        return ResponseEntity.ok(
+                hodService.getPreviousCycles()
+        );
+
+    }
+    // =====================================
+// Previous cycle packet records
+// =====================================
+
+    @GetMapping("/packets/previous/{cycleId}")
+    public ResponseEntity<List<HodPacketResponseDTO>>
+    getPreviousCyclePackets(
+            @PathVariable Long cycleId
+    ){
+
+
+        return ResponseEntity.ok(
+                hodService.getPreviousCyclePackets(cycleId)
+        );
+
+    }
+
 
 }

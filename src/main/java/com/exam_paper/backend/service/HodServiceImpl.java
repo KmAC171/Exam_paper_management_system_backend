@@ -31,6 +31,7 @@ public class HodServiceImpl {
     private final MarkingRepository markingRepository;
 
     private final AuditLogRepository auditLogRepository;
+    private final AcademicCycleRepository academicCycleRepository;
 
 
 
@@ -470,6 +471,66 @@ public class HodServiceImpl {
 
                 )
 
+
+                .stream()
+
+                .map(this::convertToDTO)
+
+                .toList();
+
+    }
+
+    // =====================================
+// View previous academic cycles
+// =====================================
+
+    public List<AcademicCycleResponseDTO> getPreviousCycles(){
+
+
+        return academicCycleRepository
+                .findByStatus("Completed")
+
+                .stream()
+
+                .map(cycle ->
+                        AcademicCycleResponseDTO.builder()
+
+                                .cycleId(
+                                        cycle.getCycleId()
+                                )
+
+                                .year(
+                                        cycle.getYear()
+                                )
+
+                                .semester(
+                                        cycle.getSemester()
+                                )
+
+                                .status(
+                                        cycle.getStatus()
+                                )
+
+                                .build()
+
+                )
+
+                .toList();
+
+    }
+
+    // =====================================
+// View packets from previous cycle
+// =====================================
+
+    public List<HodPacketResponseDTO> getPreviousCyclePackets(
+            Long cycleId
+    ){
+
+
+        return examPacketRepository
+
+                .findByAcademicCycleCycleId(cycleId)
 
                 .stream()
 

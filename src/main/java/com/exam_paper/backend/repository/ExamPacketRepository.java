@@ -144,5 +144,13 @@ public interface ExamPacketRepository
             @Param("lecturerId") Long lecturerId
     );
 
+    // =====================================
+// Previous academic cycle packets
+// =====================================
+
+    List<ExamPacket> findByAcademicCycleCycleId(
+            Long cycleId
+    );
+
 
 }
