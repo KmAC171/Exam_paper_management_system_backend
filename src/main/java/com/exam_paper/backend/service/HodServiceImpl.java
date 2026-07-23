@@ -619,4 +619,61 @@ public class HodServiceImpl {
 
 
     }
+    // =====================================
+// Workload Comparison
+// =====================================
+
+
+    public List<WorkloadComparisonDTO>
+    getWorkloadComparison(){
+
+
+        return examPacketRepository
+                .getWorkloadComparison()
+
+                .stream()
+
+                .map(row -> new WorkloadComparisonDTO(
+
+                        (String) row[0],
+
+                        (String) row[1],
+
+                        ((Number)row[2])
+                                .longValue()
+
+                ))
+
+                .toList();
+
+    }
+
+
+
+
+
+
+// =====================================
+// Dashboard Status Analytics
+// =====================================
+
+
+    public DashboardStatusDTO
+    getDashboardStatus(){
+
+
+        return new DashboardStatusDTO(
+
+                examPacketRepository.countPending(),
+
+                examPacketRepository.countCompleted(),
+
+                examPacketRepository.countInProgress(),
+
+                examPacketRepository.countOverdue()
+
+        );
+
+
+    }
 }

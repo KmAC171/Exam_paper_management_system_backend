@@ -341,5 +341,95 @@ public interface ExamPacketRepository
         """)
     Long countOverduePackets();
 
+    // =====================================
+// Workload Comparison
+// =====================================
+
+    @Query("""
+        SELECT
+
+        pa.user.fullName,
+
+        pa.assignedRole,
+
+        COUNT(p)
+
+
+        FROM PacketAssignment pa
+
+
+        JOIN pa.packet p
+
+
+        GROUP BY
+
+        pa.user.fullName,
+
+        pa.assignedRole
+
+        """)
+    List<Object[]> getWorkloadComparison();
+
+
+
+
+
+// =====================================
+// Dashboard Status Count
+// =====================================
+
+
+    @Query("""
+        SELECT COUNT(p)
+
+        FROM ExamPacket p
+
+        WHERE p.status='Pending'
+
+        """)
+    Long countPending();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+
+        FROM ExamPacket p
+
+        WHERE p.status='Completed'
+
+        """)
+    Long countCompleted();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+
+        FROM ExamPacket p
+
+        WHERE p.status='In Progress'
+
+        """)
+    Long countInProgress();
+
+
+
+
+    @Query("""
+        SELECT COUNT(p)
+
+        FROM ExamPacket p
+
+        WHERE p.deadline < CURRENT_DATE
+
+        AND p.status <> 'Completed'
+
+        """)
+    Long countOverdue();
+
+
 
 }
