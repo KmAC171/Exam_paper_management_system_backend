@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -23,6 +24,7 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String username;
+
     @Column(nullable = false)
     private String fullName;
 
@@ -31,6 +33,6 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
-
+    @Builder.Default
+    private Role role = Role.ROLE_USER;
 }
