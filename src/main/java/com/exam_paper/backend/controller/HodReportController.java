@@ -8,7 +8,9 @@ import com.exam_paper.backend.service.HodReportService;
 import lombok.RequiredArgsConstructor;
 
 
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 
 import org.springframework.web.bind.annotation.*;
@@ -32,10 +34,9 @@ public class HodReportController {
 
 
 
-    // ===============================
-    // Department analytics summary
-    // ===============================
-
+    // =====================================
+    // Department Analytics Summary
+    // =====================================
 
     @GetMapping("/summary")
     public ResponseEntity<HodReportResponseDTO>
@@ -43,8 +44,11 @@ public class HodReportController {
 
 
         return ResponseEntity.ok(
+
                 service.getSummary()
+
         );
+
 
     }
 
@@ -53,35 +57,40 @@ public class HodReportController {
 
 
 
-    // ===============================
-    // Excel export
-    // ===============================
 
+    // =====================================
+    // Export PDF Report
+    // =====================================
 
-    @GetMapping("/export/excel")
-    public ResponseEntity<byte[]>
-    exportExcel(){
+    @GetMapping("/export/pdf")
+    public ResponseEntity<byte[]> exportPDF(){
+
 
 
         ByteArrayInputStream stream =
-                service.generateExcel();
+                service.generatePDF();
+
 
 
 
         return ResponseEntity.ok()
 
+
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=hod_report.xlsx"
+                        "attachment; filename=hod_report.pdf"
                 )
 
+
                 .contentType(
-                        MediaType.APPLICATION_OCTET_STREAM
+                        MediaType.APPLICATION_PDF
                 )
+
 
                 .body(
                         stream.readAllBytes()
                 );
+
 
     }
 

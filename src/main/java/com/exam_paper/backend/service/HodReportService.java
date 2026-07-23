@@ -2,23 +2,22 @@ package com.exam_paper.backend.service;
 
 
 import com.exam_paper.backend.dto.HodReportResponseDTO;
-import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.repository.ExamPacketRepository;
 
 
 import lombok.RequiredArgsConstructor;
 
 
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
-
 import org.springframework.stereotype.Service;
+
+
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
 
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 
 
 
@@ -41,38 +40,17 @@ public class HodReportService {
     public HodReportResponseDTO getSummary(){
 
 
-        Long total =
-                examPacketRepository.countTotalPackets();
-
-
-        Long completed =
-                examPacketRepository.countCompletedPackets();
-
-
-        Long pending =
-                examPacketRepository.countPendingPackets();
-
-
-        Long inProgress =
-                examPacketRepository.countInProgressPackets();
-
-
-        Long overdue =
-                examPacketRepository.countOverduePackets();
-
-
-
         return new HodReportResponseDTO(
 
-                total,
+                examPacketRepository.countTotalPackets(),
 
-                completed,
+                examPacketRepository.countCompletedPackets(),
 
-                pending,
+                examPacketRepository.countPendingPackets(),
 
-                inProgress,
+                examPacketRepository.countInProgressPackets(),
 
-                overdue
+                examPacketRepository.countOverduePackets()
 
         );
 
@@ -85,88 +63,34 @@ public class HodReportService {
 
 
     // =====================================
-    // Progress Report
+    // Generate PDF Report
     // =====================================
 
-    public List<ExamPacket> getProgressReport(){
+    public ByteArrayInputStream generatePDF(){
 
 
-        return examPacketRepository.findAll()
+        try{
 
-                .stream()
 
-                .filter(packet ->
-                        packet.getStatus()
-                                .equalsIgnoreCase("Completed")
-                )
-
-                .toList();
-
-    }
+            ByteArrayOutputStream output =
+                    new ByteArrayOutputStream();
 
 
 
+            Document document =
+                    new Document();
 
 
 
-
-    // =====================================
-    // Delay Report
-    // =====================================
-
-    public List<ExamPacket> getDelayReport(){
-
-
-        return examPacketRepository
-                .findDelayedPackets();
-
-    }
+            PdfWriter.getInstance(
+                    document,
+                    output
+            );
 
 
 
+            document.open();
 
-
-
-
-
-    // =====================================
-    // Export Excel Report
-    // =====================================
-
-    public ByteArrayInputStream generateExcel(){
-
-
-        try {
-
-
-            Workbook workbook =
-                    new XSSFWorkbook();
-
-
-
-            Sheet sheet =
-                    workbook.createSheet(
-                            "HOD Report"
-                    );
-
-
-
-
-            Row header =
-                    sheet.createRow(0);
-
-
-
-            header.createCell(0)
-                    .setCellValue(
-                            "Report"
-                    );
-
-
-            header.createCell(1)
-                    .setCellValue(
-                            "Count"
-                    );
 
 
 
@@ -178,98 +102,70 @@ public class HodReportService {
 
 
 
-            String[][] data = {
-
-
-                    {
-                            "Total Packets",
-                            String.valueOf(
-                                    report.getTotalPackets()
-                            )
-                    },
-
-
-                    {
-                            "Completed Packets",
-                            String.valueOf(
-                                    report.getCompletedPackets()
-                            )
-                    },
-
-
-                    {
-                            "Pending Packets",
-                            String.valueOf(
-                                    report.getPendingPackets()
-                            )
-                    },
-
-
-                    {
-                            "In Progress Packets",
-                            String.valueOf(
-                                    report.getInProgressPackets()
-                            )
-                    },
-
-
-                    {
-                            "Overdue Packets",
-                            String.valueOf(
-                                    report.getOverduePackets()
-                            )
-                    }
-
-
-            };
+            document.add(
+                    new Paragraph(
+                            "HOD Department Report"
+                    )
+            );
 
 
 
+            document.add(
+                    new Paragraph(
+                            "--------------------------------"
+                    )
+            );
 
 
 
-            int rowNumber = 1;
+            document.add(
+                    new Paragraph(
+                            "Total Packets : "
+                                    + report.getTotalPackets()
+                    )
+            );
 
 
 
-            for(String[] rowData : data){
-
-
-                Row row =
-                        sheet.createRow(
-                                rowNumber++
-                        );
-
-
-
-                row.createCell(0)
-                        .setCellValue(
-                                rowData[0]
-                        );
+            document.add(
+                    new Paragraph(
+                            "Completed Packets : "
+                                    + report.getCompletedPackets()
+                    )
+            );
 
 
 
-                row.createCell(1)
-                        .setCellValue(
-                                rowData[1]
-                        );
+            document.add(
+                    new Paragraph(
+                            "Pending Packets : "
+                                    + report.getPendingPackets()
+                    )
+            );
 
-            }
+
+
+            document.add(
+                    new Paragraph(
+                            "In Progress Packets : "
+                                    + report.getInProgressPackets()
+                    )
+            );
+
+
+
+            document.add(
+                    new Paragraph(
+                            "Overdue Packets : "
+                                    + report.getOverduePackets()
+                    )
+            );
 
 
 
 
+            document.close();
 
-
-            ByteArrayOutputStream output =
-                    new ByteArrayOutputStream();
-
-
-
-            workbook.write(output);
-
-
-            workbook.close();
 
 
 
@@ -283,8 +179,9 @@ public class HodReportService {
 
 
             throw new RuntimeException(
-                    "Excel export failed"
+                    "PDF generation failed"
             );
+
 
         }
 
