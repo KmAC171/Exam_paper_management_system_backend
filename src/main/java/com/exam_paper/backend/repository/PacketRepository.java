@@ -11,22 +11,21 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
 
     //AR & HOD
     @Query("SELECT p FROM ExamPacket p " +
-     " JOIN FETCH p.course c " +
-            " JOIN FETCH p.department c " +
-            " JOIN FETCH p.lecturer c " +
-            " JOIN FETCH p.moderator c " +
-            " JOIN FETCH p.status c ")
+            "JOIN FETCH p.course c " +
+            "JOIN FETCH c.department " +
+            "JOIN FETCH p.lecturer " +
+            "JOIN FETCH p.moderator " +
+            "JOIN FETCH p.status")
     List<ExamPacket> findAllWithDetails();
 
     //lecturer
     @Query("SELECT p FROM ExamPacket p " +
-    "JOIN FETCH p.course c " +
-    " JOIN FETCH p.department " +
-            " JOIN FETCH p.lecturer l " +
-            " JOIN FETCH p.moderator " +
-            " JOIN FETCH p.status " +
-            " WHERE l.userId = :userId"
-    )
+            "JOIN FETCH p.course c " +
+            "JOIN FETCH c.department " +
+            "JOIN FETCH p.lecturer l " +
+            "JOIN FETCH p.moderator " +
+            "JOIN FETCH p.status " +
+            "WHERE l.userId = :userId")
     List<ExamPacket> findByLecturerId(@Param("userId") Long userId);
 
     //moderator
