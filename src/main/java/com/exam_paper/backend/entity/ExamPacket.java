@@ -33,4 +33,12 @@ public class ExamPacket {
     private PacketStatus status;
 
     private LocalDate deadline;
+
+    private String duration;
+    private Integer totalMarks;
+    private String questions;
+    private String format;
+    private String moderatorNote;
+    private LocalDate moderationDeadline;
+    private LocalDate examDate;
 }
