@@ -1,6 +1,7 @@
 package com.exam_paper.backend.controller;
 
 import com.exam_paper.backend.dto.PacketDTO;
+import com.exam_paper.backend.dto.PacketDetailDTO;
 import com.exam_paper.backend.service.PacketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -22,4 +23,11 @@ public class PacketController {
                 .iterator().next().getAuthority();
         return packetService.getPackets(username, role);
     }
+
+    @GetMapping("/{id}")
+    public PacketDetailDTO getPacketDetail(@PathVariable Long id) {
+        return packetService.getPacketDetail(id);
+    }
+
+
 }
