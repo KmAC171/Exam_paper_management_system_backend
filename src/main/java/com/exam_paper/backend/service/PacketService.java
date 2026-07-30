@@ -1,6 +1,7 @@
 package com.exam_paper.backend.service;
 
 import com.exam_paper.backend.dto.PacketDTO;
+import com.exam_paper.backend.dto.PacketDetailDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.entity.User;
 import com.exam_paper.backend.repository.PacketRepository;
@@ -38,6 +39,51 @@ public class PacketService {
         return packets.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    public PacketDetailDTO getPacketDetail(Long id) {
+        ExamPacket p = packetRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Packet not found"));
+
+        LocalDate today = LocalDate.now();
+        LocalDate deadline = p.getDeadline();
+
+        boolean overdue = deadline != null && deadline.isBefore(today);
+
+        String priority;
+        if (deadline == null) {
+            priority = "LOW";
+        } else if (deadline.isBefore(today)) {
+            priority = "HIGH";
+        } else if (deadline.isBefore(today.plusDays(7))) {
+            priority = "MEDIUM";
+        } else {
+            priority = "LOW";
+        }
+
+        String packetId = String.format("PKT-%d-%03d",
+                deadline != null ? deadline.getYear() : today.getYear(),
+                p.getPacketId());
+
+        return new PacketDetailDTO(
+                packetId,
+                p.getCourse().getCourseCode(),
+                p.getCourse().getCourseName(),
+                p.getCourse().getDepartment().getDepartmentName(),
+                p.getLecturer().getFullName(),
+                p.getModerator().getFullName(),
+                deadline,
+                p.getModerationDeadline(),
+                p.getExamDate(),
+                p.getStatus().getStatusName(),
+                priority,
+                overdue,
+                p.getDuration(),
+                p.getTotalMarks(),
+                p.getQuestions(),
+                p.getFormat(),
+                p.getModeratorNote()
+        );
     }
 
     private PacketDTO toDTO(ExamPacket p) {
