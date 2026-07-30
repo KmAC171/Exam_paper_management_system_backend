@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
 
@@ -37,4 +38,13 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
             "JOIN FETCH p.status " +
             "WHERE m.userId = :userId")
     List<ExamPacket> findByModeratorId(@Param("userId") Long userId);
+
+    @Query("SELECT p FROM ExamPacket p " +
+            "JOIN FETCH p.course c " +
+            "JOIN FETCH c.department " +
+            "JOIN FETCH p.lecturer " +
+            "JOIN FETCH p.moderator " +
+            "JOIN FETCH p.status " +
+            "WHERE p.packetId = :id")
+    Optional<ExamPacket> findByIdWithDetails(@Param("id") Long id);
 }
