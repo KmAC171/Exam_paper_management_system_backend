@@ -24,4 +24,11 @@ public class ActivityLog {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    private String actorName;
+    private String stageName;
+
+    @ManyToOne
+    @JoinColumn(name = "packet_id")
+    private ExamPacket packet;
 }
