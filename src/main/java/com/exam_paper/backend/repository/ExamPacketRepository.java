@@ -42,4 +42,34 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     """, nativeQuery = true)
     List<SubmissionTrendProjection> getSubmissionTrend();
 
+    // Monthly trend — submitted per month
+    @Query(value = """
+    SELECT
+        MONTH(p.deadline) AS month,
+        COUNT(*) AS submitted,
+        SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END) AS approved,
+        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+    FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE YEAR(p.deadline) = YEAR(CURDATE())
+    GROUP BY MONTH(p.deadline)
+    ORDER BY MONTH(p.deadline)
+    """, nativeQuery = true)
+    List<MonthlyTrendProjection> getMonthlyTrend();
+
+    // Department comparison
+    @Query(value = """
+    SELECT
+        d.department_name AS departmentName,
+        COUNT(p.packet_id) AS totalPackets,
+        SUM(CASE WHEN ps.status_name != 'PENDING' OR p.deadline >= CURDATE() THEN 1 ELSE 0 END) AS onTime,
+        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+    FROM exam_packets p
+    JOIN courses c ON p.course_id = c.course_id
+    JOIN departments d ON c.department_id = d.department_id
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    GROUP BY d.department_id, d.department_name
+    """, nativeQuery = true)
+    List<DepartmentReportProjection> getDepartmentReport();
+
 }
