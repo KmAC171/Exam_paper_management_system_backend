@@ -1,7 +1,7 @@
 package com.exam_paper.backend.controller.hod;
 
-import com.example.backend.dto.hod.*;
-import com.example.backend.service.hod.HodService;
+import com.exam_paper.backend.dto.hod.*;
+import com.exam_paper.backend.service.hod.HodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
