@@ -3,32 +3,37 @@ package com.exam_paper.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.List;
+
 import java.time.LocalDate;
+import java.util.List;
 
 
 @Entity
-@Table(name = "exam_packets")
+@Table(name="exam_packets")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ExamPacket {
 
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long packetId;
+    @Column(length=10)
+    private String packetId;
+
 
 
     @ManyToOne
-    @JoinColumn(name = "course_id")
+    @JoinColumn(name="course_id")
     private Course course;
 
 
+
     @ManyToOne
-    @JoinColumn(name = "cycle_id")
+    @JoinColumn(name="cycle_id")
     private AcademicCycle academicCycle;
+
 
 
     private String status;
@@ -39,10 +44,27 @@ public class ExamPacket {
 
 
     @ManyToOne
-    @JoinColumn(name = "current_holder_id")
+    @JoinColumn(name="current_holder_id")
     private User currentHolder;
 
-    @OneToMany(mappedBy = "packet")
+
+
+    @OneToMany(mappedBy="packet")
     private List<PacketAssignment> assignments;
+
+
+
+    @OneToMany(mappedBy="packet")
+    private List<PacketMovement> movements;
+
+
+
+    @OneToMany(mappedBy="packet")
+    private List<Comment> comments;
+
+
+
+    @OneToOne(mappedBy="packet")
+    private Marking marking;
 
 }

@@ -8,18 +8,18 @@ import java.time.LocalDateTime;
 
 
 @Entity
-@Table(name="audit_logs")
+@Table(name="notifications")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuditLog {
+public class Notification {
 
 
     @Id
     @Column(length=10)
-    private String logId;
+    private String notificationId;
 
 
 
@@ -29,13 +29,17 @@ public class AuditLog {
 
 
 
-    private String action;
-
-
-    private String entity;
+    @Column(columnDefinition="TEXT")
+    private String message;
 
 
 
-    private LocalDateTime timestamp;
+    private String type;
+
+
+    private String status;
+
+
+    private LocalDateTime createdAt;
 
 }

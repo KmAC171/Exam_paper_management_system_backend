@@ -7,30 +7,30 @@ import lombok.*;
 import java.time.LocalDate;
 
 
-
 @Entity
-@Table(name = "packet_assignments")
+@Table(name="packet_assignments")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PacketAssignment {
 
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long assignmentId;
+    @Column(length=10)
+    private String assignmentId;
 
 
 
     @ManyToOne
-    @JoinColumn(name = "packet_id")
+    @JoinColumn(name="packet_id")
     private ExamPacket packet;
 
 
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name="user_id")
     private User user;
 
 
@@ -39,7 +39,5 @@ public class PacketAssignment {
 
 
     private LocalDate assignedDate;
-
-
 
 }

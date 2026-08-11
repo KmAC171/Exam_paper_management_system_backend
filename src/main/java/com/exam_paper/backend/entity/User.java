@@ -1,10 +1,14 @@
 package com.exam_paper.backend.entity;
 
+
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
+
 @Entity
-@Table(name = "users")
+@Table(name="users")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -12,16 +16,39 @@ import lombok.*;
 @Builder
 public class User {
 
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    @Column(length=10)
+    private String userId;
 
-    @Column(unique = true, nullable = false)
-    private String username;
 
-    private String fullName;
+    @Column(nullable=false,length=100)
+    private String name;
 
-    private String password;
 
-    private String role;
+    @Column(nullable=false,unique=true)
+    private String email;
+
+
+
+    @ManyToOne
+    @JoinColumn(name="role_id")
+    private Role role;
+
+
+
+    @ManyToOne
+    @JoinColumn(name="dept_id")
+    private Department department;
+
+
+
+    @OneToMany(mappedBy="currentHolder")
+    private List<ExamPacket> packets;
+
+
+
+    @OneToMany(mappedBy="user")
+    private List<Notification> notifications;
+
 }
