@@ -1,7 +1,7 @@
 package com.exam_paper.backend.repository;
 
 
-import com.example.backend.entity.Marking;
+import com.exam_paper.backend.entity.Marking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
