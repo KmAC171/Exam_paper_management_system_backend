@@ -11,20 +11,17 @@ public class LecturerDashboardResponseDTO {
 
     private String lecturerId;
 
-    private long totalAssignedPackets;
+    private long totalActiveTasks;
 
-    private long pendingTasks;
+    private int scriptsToMark;
 
     private long completedTasks;
 
-    private long overdueTasks;
+    private long overdueItems;
 
     private int totalScripts;
 
     private int markedScripts;
 
-    private int remainingScripts;
-
     private LocalDate nextDeadline;
-
 }

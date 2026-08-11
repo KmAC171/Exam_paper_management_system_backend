@@ -918,6 +918,15 @@ public class LecturerService {
 
     }
 
+
+
+    /**
+     * Task: Calculate and return dashboard statistics for a lecturer.
+     *
+     * This includes active tasks, scripts remaining to be marked,
+     * completed tasks, overdue tasks, total scripts, marked scripts,
+     * and the next upcoming deadline.
+     */
     public LecturerDashboardResponseDTO getDashboard(String lecturerId) {
 
         List<PacketAssignment> assignments =
@@ -926,11 +935,9 @@ public class LecturerService {
         List<Marking> markings =
                 markingRepository.findByLecturerUserId(lecturerId);
 
-        long totalAssignedPackets = assignments.size();
-
-        long pendingTasks = 0;
+        long totalActiveTasks = 0;
         long completedTasks = 0;
-        long overdueTasks = 0;
+        long overdueItems = 0;
 
         int totalScripts = 0;
         int markedScripts = 0;
@@ -942,62 +949,61 @@ public class LecturerService {
 
             ExamPacket packet = assignment.getPacket();
 
-            if ("Completed".equalsIgnoreCase(packet.getStatus())) {
+            if (packet == null) {
+                continue;
+            }
+
+            String status = packet.getStatus();
+
+            // Completed task
+            if ("Completed".equalsIgnoreCase(status)) {
 
                 completedTasks++;
 
-            } else if (packet.getDeadline() != null &&
-                    packet.getDeadline().isBefore(today)) {
-
-                overdueTasks++;
-
             } else {
 
-                pendingTasks++;
-            }
+                // Any non-completed task is an active task
+                totalActiveTasks++;
 
-            if (packet.getDeadline() != null) {
+                // Check whether the active task is overdue
+                if (packet.getDeadline() != null &&
+                        packet.getDeadline().isBefore(today)) {
 
-                if (nextDeadline == null ||
-                        packet.getDeadline().isBefore(nextDeadline)) {
+                    overdueItems++;
+                }
 
-                    nextDeadline = packet.getDeadline();
+                // Find next upcoming deadline
+                if (packet.getDeadline() != null &&
+                        !packet.getDeadline().isBefore(today)) {
+
+                    if (nextDeadline == null ||
+                            packet.getDeadline().isBefore(nextDeadline)) {
+
+                        nextDeadline = packet.getDeadline();
+                    }
                 }
             }
-
         }
 
+        // Calculate script statistics
         for (Marking marking : markings) {
 
             totalScripts += marking.getTotalScripts();
             markedScripts += marking.getMarkedScripts();
-
         }
 
-        int remainingScripts = totalScripts - markedScripts;
+        int scriptsToMark = Math.max(0, totalScripts - markedScripts);
 
         return new LecturerDashboardResponseDTO(
-
                 lecturerId,
-
-                totalAssignedPackets,
-
-                pendingTasks,
-
+                totalActiveTasks,
+                scriptsToMark,
                 completedTasks,
-
-                overdueTasks,
-
+                overdueItems,
                 totalScripts,
-
                 markedScripts,
-
-                remainingScripts,
-
                 nextDeadline
-
         );
-
     }
     public List<LecturerMarkingProcessDTO> getMarkingProcess(String lecturerId) {
 
