@@ -1,38 +1,26 @@
 package com.exam_paper.backend.repository;
 
 
-import com.exam_paper.backend.dto.MarkingProgressResponseDTO;
-import com.exam_paper.backend.entity.Marking;
-
-
-import org.springframework.data.jpa.repository.*;
+import com.example.backend.entity.Marking;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 
-
+@Repository
 public interface MarkingRepository
-        extends JpaRepository<Marking,Long>{
+        extends JpaRepository<Marking,String>{
 
 
 
-    @Query("""
-            SELECT new com.exam_paper.backend.dto.MarkingProgressResponseDTO(
+    List<Marking> findByLecturerUserId(String lecturerId);
 
-            u.userId,
-            u.fullName,
-            m.totalScripts,
-            m.markedScripts,
-            (m.markedScripts * 100.0 / m.totalScripts)
 
-            )
 
-            FROM Marking m
+    List<Marking> findByPacketPacketId(String packetId);
 
-            JOIN m.lecturer u
-
-            """)
-    List<MarkingProgressResponseDTO> getMarkingProgress();
+    boolean existsByPacketPacketId(String packetId);
 
 
 
