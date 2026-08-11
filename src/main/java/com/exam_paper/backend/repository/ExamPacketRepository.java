@@ -1,6 +1,6 @@
 package com.exam_paper.backend.repository;
 
-import com.example.backend.entity.ExamPacket;
+import com.exam_paper.backend.entity.ExamPacket;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
