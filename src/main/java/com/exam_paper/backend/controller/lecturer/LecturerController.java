@@ -1,9 +1,9 @@
 package com.exam_paper.backend.controller.lecturer;
 
 
-import com.example.backend.dto.lecturer.*;
-import com.example.backend.dto.lecturer.UpdatePacketStatusRequestDTO;
-import com.example.backend.service.lecturer.LecturerService;
+import com.exam_paper.backend.dto.lecturer.*;
+import com.exam_paper.backend.dto.lecturer.UpdatePacketStatusRequestDTO;
+import com.exam_paper.backend.service.lecturer.LecturerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
