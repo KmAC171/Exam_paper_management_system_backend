@@ -4,48 +4,43 @@ package com.exam_paper.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 
 @Entity
-@Table(name = "markings")
+@Table(name="markings")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Marking {
 
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long markingId;
+    @Column(length=10)
+    private String markingId;
 
 
-    @ManyToOne
-    @JoinColumn(name = "packet_id")
+
+    @OneToOne
+    @JoinColumn(name="packet_id")
     private ExamPacket packet;
 
 
+
     @ManyToOne
-    @JoinColumn(name = "lecturer_id")
+    @JoinColumn(name="lecturer_id")
     private User lecturer;
 
 
-    private Integer scriptCount;
+
+    private Integer totalScripts;
 
 
-    private Integer completedScripts = 0;
+    private Integer markedScripts;
 
 
-    private LocalDateTime createdAt;
-
-
-
-    @PrePersist
-    public void onCreate(){
-
-        createdAt = LocalDateTime.now();
-
-    }
+    private LocalDate deadline;
 
 }

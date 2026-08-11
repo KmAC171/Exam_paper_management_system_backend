@@ -3,6 +3,8 @@ package com.exam_paper.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -12,27 +14,30 @@ import lombok.*;
 @Builder
 public class User {
 
-    public enum Role {
-        ROLE_ADMIN,
-        ROLE_MODERATOR,
-        ROLE_USER
-    }
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    @Column(name = "user_id", length = 10)
+    private String userId;
 
-    @Column(unique = true, nullable = false)
-    private String username;
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(nullable = false, unique = true)
+    private String email;
 
     @Column(nullable = false)
-    private String fullName;
+    private String password; // Added for BCrypt password hashing
 
-    @Column(nullable = false)
-    private String password;
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private Role role = Role.ROLE_USER;
+    @ManyToOne
+    @JoinColumn(name = "dept_id")
+    private Department department;
+
+    @OneToMany(mappedBy = "currentHolder")
+    private List<ExamPacket> packets;
+
+    @OneToMany(mappedBy = "user")
+    private List<Notification> notifications;
 }
