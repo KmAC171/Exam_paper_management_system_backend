@@ -1,14 +1,12 @@
 package com.exam_paper.backend.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
 
-
 @Entity
-@Table(name="markings")
+@Table(name = "markings")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,31 +14,28 @@ import java.time.LocalDate;
 @Builder
 public class Marking {
 
-
     @Id
-    @Column(length=10)
+    @Column(name = "marking_id", length = 36, nullable = false) // Changed from 10 to 36
     private String markingId;
 
-
-
-    @OneToOne
-    @JoinColumn(name="packet_id")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "packet_id",
+            nullable = false,
+            unique = true
+    )
     private ExamPacket packet;
 
-
-
-    @ManyToOne
-    @JoinColumn(name="lecturer_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "lecturer_id",
+            nullable = false
+    )
     private User lecturer;
 
-
-
+    @Column(name = "total_scripts")
     private Integer totalScripts;
 
-
-    private Integer markedScripts;
-
-
+    @Column(name = "deadline")
     private LocalDate deadline;
-
 }

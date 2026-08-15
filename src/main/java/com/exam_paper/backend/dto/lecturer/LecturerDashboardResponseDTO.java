@@ -13,15 +13,11 @@ public class LecturerDashboardResponseDTO {
 
     private long totalActiveTasks;
 
-    private int scriptsToMark;
-
     private long completedTasks;
 
     private long overdueItems;
 
     private int totalScripts;
-
-    private int markedScripts;
 
     private LocalDate nextDeadline;
 }

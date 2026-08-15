@@ -10,6 +10,8 @@ import com.exam_paper.backend.repository.*;
 import com.exam_paper.backend.repository.ExamPacketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,30 +62,32 @@ public class LecturerService {
     */
     private AssignedPacketResponseDTO convertToDto(
             PacketAssignment assignment
-    ){
+    ) {
 
         ExamPacket packet = assignment.getPacket();
 
+        if (packet == null) {
+            throw new RuntimeException(
+                    "Packet not found for assignment: "
+                            + assignment.getAssignmentId()
+            );
+        }
 
         return AssignedPacketResponseDTO.builder()
-
 
                 .packetId(
                         packet.getPacketId()
                 )
-
 
                 .courseCode(
                         packet.getCourse()
                                 .getCourseCode()
                 )
 
-
                 .courseName(
                         packet.getCourse()
                                 .getCourseName()
                 )
-
 
                 .departmentName(
                         packet.getCourse()
@@ -91,37 +95,35 @@ public class LecturerService {
                                 .getDeptName()
                 )
 
-
                 .academicYear(
                         packet.getAcademicCycle()
                                 .getYear()
                 )
-
 
                 .semester(
                         packet.getAcademicCycle()
                                 .getSemester()
                 )
 
-
                 .deadline(
                         packet.getDeadline()
                 )
 
-
                 .status(
                         packet.getStatus()
                 )
-
 
                 .currentHolderName(
                         packet.getCurrentHolder()
                                 .getName()
                 )
 
+                // IMPORTANT
+                .taskType(
+                        assignment.getTaskType()
+                )
 
                 .build();
-
     }
 
     public PacketDetailsResponseDTO getPacketDetails(String packetId){
@@ -172,69 +174,85 @@ public class LecturerService {
 
     }
 
-    public String addMarkingScripts(AddMarkingRequestDTO request){
+    /**
+     * Add or update total script details for a marking entry.
+     */
+    @Transactional
+    public String addMarkingScripts(AddMarkingRequestDTO request) {
 
-
-        if(markingRepository.existsByPacketPacketId(
-                request.getPacketId()
-        )){
-
-            throw new RuntimeException(
-                    "Marking already added for this packet"
-            );
-
+        // Validate request
+        if (request == null) {
+            throw new RuntimeException("Request cannot be null");
         }
 
+        if (request.getPacketId() == null || request.getPacketId().isBlank()) {
+            throw new RuntimeException("Packet ID is required");
+        }
 
+        if (request.getLecturerId() == null || request.getLecturerId().isBlank()) {
+            throw new RuntimeException("Lecturer ID is required");
+        }
 
-        Marking marking = Marking.builder()
+        if (request.getTotalScripts() == null || request.getTotalScripts() <= 0) {
+            throw new RuntimeException("Total scripts must be greater than 0");
+        }
 
-                .markingId(
-                        "MK"+System.currentTimeMillis()
-                )
+        // Find packet using the correct ID (e.g., "P1")
+        ExamPacket packet = examPacketRepository
+                .findById(request.getPacketId())
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "Packet not found: " + request.getPacketId() +
+                                        ". Please ensure the database contains this ID (e.g., 'P1')."
+                        )
+                );
 
-                .packet(
-                        examPacketRepository
-                                .findById(request.getPacketId())
-                                .orElseThrow(
-                                        () -> new RuntimeException(
-                                                "Packet not found"
-                                        )
-                                )
-                )
+        // Find lecturer
+        User lecturer = userRepository
+                .findById(request.getLecturerId())
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "Lecturer not found: " + request.getLecturerId()
+                        )
+                );
 
+        // Check whether marking already exists
+        Optional<Marking> existingMarking =
+                markingRepository.findByPacketPacketId(request.getPacketId());
 
-                .lecturer(
-                        userRepository
-                                .findById(request.getLecturerId())
-                                .orElseThrow(
-                                        () -> new RuntimeException(
-                                                "Lecturer not found"
-                                        )
-                                )
-                )
+        Marking marking;
 
-
-                .totalScripts(
-                        request.getTotalScripts()
-                )
-
-
-                .markedScripts(0)
-
-
-                .build();
-
-
+        if (existingMarking.isPresent()) {
+            // Update existing marking
+            marking = existingMarking.get();
+            marking.setLecturer(lecturer);
+            marking.setTotalScripts(request.getTotalScripts());
+        } else {
+            // Create new marking
+            marking = Marking.builder()
+                    .markingId("MK" + System.currentTimeMillis())
+                    .packet(packet)
+                    .lecturer(lecturer)
+                    .totalScripts(request.getTotalScripts())
+                    .build();
+        }
 
         markingRepository.save(marking);
 
-
-
-        return "Number of answer scripts added successfully";
-
+        return "Total number of answer scripts added successfully";
     }
 
+
+    public MarkingResponseDTO getMarkingByPacketId(String packetId) {
+        Marking marking = markingRepository.findByPacketPacketId(packetId)
+                .orElse(null);
+
+        if (marking == null) {
+            return new MarkingResponseDTO(packetId, 0); // Default if not set yet
+        }
+
+        return new MarkingResponseDTO(marking.getPacket().getPacketId(), marking.getTotalScripts());
+    }
     /*
     Feature:
     Access previous academic packet records
@@ -688,31 +706,6 @@ public class LecturerService {
                 count
         );
     }
-    public LecturerMarkingSummaryResponseDTO getMarkingSummary(String lecturerId) {
-
-        List<Marking> markings = markingRepository.findByLecturerUserId(lecturerId);
-
-        if (markings.isEmpty()) {
-            throw new RuntimeException("No marking records found for lecturer: " + lecturerId);
-        }
-
-        int totalScripts = 0;
-        int markedScripts = 0;
-
-        for (Marking marking : markings) {
-            totalScripts += marking.getTotalScripts();
-            markedScripts += marking.getMarkedScripts();
-        }
-
-        int remainingScripts = totalScripts - markedScripts;
-
-        return new LecturerMarkingSummaryResponseDTO(
-                lecturerId,
-                totalScripts,
-                markedScripts,
-                remainingScripts
-        );
-    }
 
     public LecturerTaskSummaryResponseDTO getTaskSummary(String lecturerId) {
 
@@ -753,6 +746,15 @@ public class LecturerService {
         );
     }
 
+    /**
+     * Retrieve workload statistics for the lecturer without markedScripts tracking.
+     */
+    /**
+     * Retrieve workload statistics for the lecturer without markedScripts tracking.
+     */
+    /**
+     * Retrieve workload statistics for the lecturer without markedScripts tracking.
+     */
     public LecturerWorkloadStatisticsDTO getWorkloadStatistics(String lecturerId) {
 
         List<PacketAssignment> assignments =
@@ -789,14 +791,13 @@ public class LecturerService {
         }
 
         int totalScripts = 0;
-        int markedScripts = 0;
 
         for (Marking marking : markings) {
 
             totalScripts += marking.getTotalScripts();
-            markedScripts += marking.getMarkedScripts();
         }
 
+        int markedScripts = 0; // Default since markedScripts tracking is not used
         int remainingScripts = totalScripts - markedScripts;
 
         return new LecturerWorkloadStatisticsDTO(
@@ -810,7 +811,6 @@ public class LecturerService {
                 overduePackets
         );
     }
-
     public List<LecturerDeadlineCalendarDTO> getDeadlineCalendar(String lecturerId) {
 
         List<PacketAssignment> assignments =
@@ -922,25 +922,16 @@ public class LecturerService {
 
     /**
      * Task: Calculate and return dashboard statistics for a lecturer.
-     *
-     * This includes active tasks, scripts remaining to be marked,
-     * completed tasks, overdue tasks, total scripts, marked scripts,
-     * and the next upcoming deadline.
      */
     public LecturerDashboardResponseDTO getDashboard(String lecturerId) {
 
         List<PacketAssignment> assignments =
                 packetAssignmentRepository.findByUserUserId(lecturerId);
 
-        List<Marking> markings =
-                markingRepository.findByLecturerUserId(lecturerId);
-
         long totalActiveTasks = 0;
         long completedTasks = 0;
         long overdueItems = 0;
-
         int totalScripts = 0;
-        int markedScripts = 0;
 
         LocalDate today = LocalDate.now();
         LocalDate nextDeadline = null;
@@ -949,62 +940,63 @@ public class LecturerService {
 
             ExamPacket packet = assignment.getPacket();
 
+            // Ignore assignments without a packet
             if (packet == null) {
                 continue;
             }
 
+            // Count every packet assigned to this lecturer
+            totalActiveTasks++;
+
+            // Get script count via the packet's associated Marking entity (without modifying ExamPacket)
+            Marking marking = packet.getMarking();
+            if (marking != null && marking.getTotalScripts() != null) {
+                totalScripts += marking.getTotalScripts();
+            }
+
             String status = packet.getStatus();
 
-            // Completed task
+            // Completed packet
             if ("Completed".equalsIgnoreCase(status)) {
-
                 completedTasks++;
+            }
 
-            } else {
+            // Check overdue
+            if (packet.getDeadline() != null &&
+                    packet.getDeadline().isBefore(today) &&
+                    !"Completed".equalsIgnoreCase(status)) {
 
-                // Any non-completed task is an active task
-                totalActiveTasks++;
+                overdueItems++;
+            }
 
-                // Check whether the active task is overdue
-                if (packet.getDeadline() != null &&
-                        packet.getDeadline().isBefore(today)) {
+            // Find nearest upcoming deadline
+            if (packet.getDeadline() != null &&
+                    !packet.getDeadline().isBefore(today) &&
+                    !"Completed".equalsIgnoreCase(status)) {
 
-                    overdueItems++;
-                }
+                if (nextDeadline == null ||
+                        packet.getDeadline().isBefore(nextDeadline)) {
 
-                // Find next upcoming deadline
-                if (packet.getDeadline() != null &&
-                        !packet.getDeadline().isBefore(today)) {
-
-                    if (nextDeadline == null ||
-                            packet.getDeadline().isBefore(nextDeadline)) {
-
-                        nextDeadline = packet.getDeadline();
-                    }
+                    nextDeadline = packet.getDeadline();
                 }
             }
         }
 
-        // Calculate script statistics
-        for (Marking marking : markings) {
-
-            totalScripts += marking.getTotalScripts();
-            markedScripts += marking.getMarkedScripts();
-        }
-
-        int scriptsToMark = Math.max(0, totalScripts - markedScripts);
-
         return new LecturerDashboardResponseDTO(
                 lecturerId,
                 totalActiveTasks,
-                scriptsToMark,
                 completedTasks,
                 overdueItems,
                 totalScripts,
-                markedScripts,
                 nextDeadline
         );
     }
+    /**
+     * Get marking process status for the lecturer without markedScripts calculations.
+     */
+    /**
+     * Get marking process status for the lecturer without markedScripts calculations.
+     */
     public List<LecturerMarkingProcessDTO> getMarkingProcess(String lecturerId) {
 
         List<Marking> markings =
@@ -1015,17 +1007,10 @@ public class LecturerService {
 
         for (Marking marking : markings) {
 
-            int remainingScripts =
-                    marking.getTotalScripts() - marking.getMarkedScripts();
-
-            double progress = 0;
-
-            if (marking.getTotalScripts() > 0) {
-
-                progress = ((double) marking.getMarkedScripts()
-                        / marking.getTotalScripts()) * 100;
-
-            }
+            int totalScripts = marking.getTotalScripts();
+            int markedScripts = 0; // Default since markedScripts tracking is not used
+            int remainingScripts = totalScripts - markedScripts;
+            double progress = 0.0;
 
             response.add(
 
@@ -1039,9 +1024,9 @@ public class LecturerService {
 
                             marking.getPacket().getCourse().getCourseName(),
 
-                            marking.getTotalScripts(),
+                            totalScripts,
 
-                            marking.getMarkedScripts(),
+                            markedScripts,
 
                             remainingScripts,
 
@@ -1057,5 +1042,4 @@ public class LecturerService {
 
         return response;
 
-    }
-}
+    }}

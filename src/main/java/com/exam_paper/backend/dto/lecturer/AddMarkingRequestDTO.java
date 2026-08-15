@@ -1,9 +1,6 @@
 package com.exam_paper.backend.dto.lecturer;
 
-
 import lombok.*;
-
-
 
 @Getter
 @Setter
@@ -12,14 +9,9 @@ import lombok.*;
 @Builder
 public class AddMarkingRequestDTO {
 
-
     private String packetId;
-
-
-    private String lecturerId;
-
 
     private Integer totalScripts;
 
-
+    private String lecturerId;
 }

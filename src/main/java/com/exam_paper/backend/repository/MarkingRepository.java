@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
@@ -18,9 +19,17 @@ public interface MarkingRepository
 
 
 
-    List<Marking> findByPacketPacketId(String packetId);
 
-    boolean existsByPacketPacketId(String packetId);
+
+
+
+
+
+
+        Optional<Marking> findByPacketPacketId(String packetId);
+
+        boolean existsByPacketPacketId(String packetId);
+
 
 
 

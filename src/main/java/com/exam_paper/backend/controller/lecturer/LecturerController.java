@@ -51,7 +51,14 @@ public class LecturerController {
                 lecturerService.addMarkingScripts(request)
         );
     }
-
+    @GetMapping("/marking/{packetId}")
+    public ResponseEntity<MarkingResponseDTO> getMarkingByPacketId(
+            @PathVariable String packetId
+    ) {
+        return ResponseEntity.ok(
+                lecturerService.getMarkingByPacketId(packetId)
+        );
+    }
     /*
         Access previous academic packet records
 
@@ -135,14 +142,7 @@ public class LecturerController {
         );
     }
 
-    @GetMapping("/{lecturerId}/marking-summary")
-    public ResponseEntity<LecturerMarkingSummaryResponseDTO> getMarkingSummary(
-            @PathVariable String lecturerId
-    ) {
-        return ResponseEntity.ok(
-                lecturerService.getMarkingSummary(lecturerId)
-        );
-    }
+
 
     @GetMapping("/{lecturerId}/task-summary")
     public ResponseEntity<LecturerTaskSummaryResponseDTO> getTaskSummary(
