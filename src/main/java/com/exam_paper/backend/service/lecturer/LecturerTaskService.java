@@ -27,71 +27,56 @@ public class LecturerTaskService {
     private final PrintingScheduleRepository printingScheduleRepository;
 
 
+    // =========================================================
+    // UPDATE PACKET STATUS
+    // =========================================================
+
     public String updatePacketStatus(
             String packetId,
             UpdatePacketStatusRequestDTO request
     ) {
 
-        ExamPacket packet =
-                examPacketRepository
-                        .findById(packetId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Packet not found"
-                                )
-                        );
+        ExamPacket packet = examPacketRepository
+                .findById(packetId)
+                .orElseThrow(
+                        () -> new RuntimeException("Packet not found")
+                );
 
-
-        packet.setStatus(
-                request.getStatus()
-        );
-
+        packet.setStatus(request.getStatus());
 
         examPacketRepository.save(packet);
-
 
         return "Packet status updated successfully";
     }
 
 
-    public CompleteTaskResponseDTO completeTask(
-            String packetId
-    ) {
+    // =========================================================
+    // COMPLETE TASK
+    // =========================================================
 
-        ExamPacket packet =
-                examPacketRepository
-                        .findById(packetId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Packet not found"
-                                )
-                        );
+    public CompleteTaskResponseDTO completeTask(String packetId) {
 
+        ExamPacket packet = examPacketRepository
+                .findById(packetId)
+                .orElseThrow(
+                        () -> new RuntimeException("Packet not found")
+                );
 
-        // update status
-        packet.setStatus("Completed");
-
+        packet.setStatus("COMPLETED");
 
         examPacketRepository.save(packet);
 
-
         return CompleteTaskResponseDTO.builder()
-
-                .packetId(
-                        packet.getPacketId()
-                )
-
-                .status(
-                        packet.getStatus()
-                )
-
-                .message(
-                        "Task marked as completed successfully"
-                )
-
+                .packetId(packet.getPacketId())
+                .status(packet.getStatus())
+                .message("Task marked as completed successfully")
                 .build();
     }
 
+
+    // =========================================================
+    // TASK SUMMARY
+    // =========================================================
 
     public LecturerTaskSummaryResponseDTO getTaskSummary(
             String lecturerId
@@ -107,17 +92,20 @@ public class LecturerTaskService {
 
         LocalDate today = LocalDate.now();
 
-
         for (PacketAssignment assignment : assignments) {
 
-            String status =
-                    assignment.getPacket().getStatus();
+            if (assignment == null ||
+                    assignment.getPacket() == null) {
+                continue;
+            }
 
-            LocalDate deadline =
-                    assignment.getPacket().getDeadline();
+            ExamPacket packet = assignment.getPacket();
 
+            String status = packet.getStatus();
 
-            if ("Completed".equalsIgnoreCase(status)) {
+            LocalDate deadline = packet.getDeadline();
+
+            if ("COMPLETED".equalsIgnoreCase(status)) {
 
                 completed++;
 
@@ -134,7 +122,6 @@ public class LecturerTaskService {
             }
         }
 
-
         return new LecturerTaskSummaryResponseDTO(
                 lecturerId,
                 pending,
@@ -144,10 +131,10 @@ public class LecturerTaskService {
     }
 
 
-    /**
-     * Retrieve workload statistics for the lecturer
-     * without markedScripts tracking.
-     */
+    // =========================================================
+    // WORKLOAD STATISTICS
+    // =========================================================
+
     public LecturerWorkloadStatisticsDTO getWorkloadStatistics(
             String lecturerId
     ) {
@@ -160,9 +147,7 @@ public class LecturerTaskService {
                 markingRepository
                         .findByLecturerUserId(lecturerId);
 
-
-        long totalAssignedPackets =
-                assignments.size();
+        long totalAssignedPackets = assignments.size();
 
         long completedPackets = 0;
         long pendingPackets = 0;
@@ -170,23 +155,24 @@ public class LecturerTaskService {
 
         LocalDate today = LocalDate.now();
 
-
         for (PacketAssignment assignment : assignments) {
 
-            ExamPacket packet =
-                    assignment.getPacket();
+            if (assignment == null ||
+                    assignment.getPacket() == null) {
+                continue;
+            }
 
+            ExamPacket packet = assignment.getPacket();
 
-            if ("Completed".equalsIgnoreCase(
-                    packet.getStatus()
-            )) {
+            String status = packet.getStatus();
+
+            if ("COMPLETED".equalsIgnoreCase(status)) {
 
                 completedPackets++;
 
             } else if (
-                    packet.getDeadline() != null
-                            && packet.getDeadline()
-                            .isBefore(today)
+                    packet.getDeadline() != null &&
+                            packet.getDeadline().isBefore(today)
             ) {
 
                 overduePackets++;
@@ -198,20 +184,33 @@ public class LecturerTaskService {
         }
 
 
+        // =====================================================
+        // SCRIPT COUNTS
+        // =====================================================
+
         int totalScripts = 0;
 
+        if (markings != null) {
 
-        for (Marking marking : markings) {
+            for (Marking marking : markings) {
 
-            totalScripts +=
-                    marking.getTotalScripts();
+                if (marking != null &&
+                        marking.getTotalScripts() != null) {
+
+                    totalScripts += marking.getTotalScripts();
+                }
+            }
         }
 
 
+        /*
+         * At the moment your Marking entity does not contain a
+         * markedScripts value, so this remains zero.
+         */
         int markedScripts = 0;
 
         int remainingScripts =
-                totalScripts - markedScripts;
+                Math.max(0, totalScripts - markedScripts);
 
 
         return new LecturerWorkloadStatisticsDTO(
@@ -227,6 +226,10 @@ public class LecturerTaskService {
     }
 
 
+    // =========================================================
+    // DEADLINE CALENDAR
+    // =========================================================
+
     public List<LecturerDeadlineCalendarDTO> getDeadlineCalendar(
             String lecturerId
     ) {
@@ -238,38 +241,39 @@ public class LecturerTaskService {
         List<LecturerDeadlineCalendarDTO> deadlines =
                 new ArrayList<>();
 
-
         for (PacketAssignment assignment : assignments) {
 
-            ExamPacket packet =
-                    assignment.getPacket();
+            if (assignment == null ||
+                    assignment.getPacket() == null) {
+                continue;
+            }
 
-            Course course =
-                    packet.getCourse();
+            ExamPacket packet = assignment.getPacket();
 
+            Course course = packet.getCourse();
+
+            if (course == null) {
+                continue;
+            }
 
             deadlines.add(
-
                     new LecturerDeadlineCalendarDTO(
-
                             packet.getPacketId(),
-
                             course.getCourseCode(),
-
                             course.getCourseName(),
-
                             packet.getDeadline(),
-
                             packet.getStatus()
-
                     )
             );
         }
 
-
         return deadlines;
     }
 
+
+    // =========================================================
+    // PRINTING SCHEDULES
+    // =========================================================
 
     public List<LecturerPrintingScheduleDTO> getPrintingSchedules(
             String lecturerId
@@ -282,12 +286,18 @@ public class LecturerTaskService {
         List<LecturerPrintingScheduleDTO> response =
                 new ArrayList<>();
 
-
         for (PacketAssignment assignment : assignments) {
 
-            ExamPacket packet =
-                    assignment.getPacket();
+            if (assignment == null ||
+                    assignment.getPacket() == null) {
+                continue;
+            }
 
+            ExamPacket packet = assignment.getPacket();
+
+            if (packet.getCourse() == null) {
+                continue;
+            }
 
             List<PrintingSchedule> schedules =
                     printingScheduleRepository
@@ -295,31 +305,149 @@ public class LecturerTaskService {
                                     packet.getPacketId()
                             );
 
+            if (schedules == null) {
+                continue;
+            }
 
             for (PrintingSchedule schedule : schedules) {
 
+                if (schedule == null) {
+                    continue;
+                }
+
                 response.add(
-
                         new LecturerPrintingScheduleDTO(
-
                                 packet.getPacketId(),
-
-                                packet.getCourse()
-                                        .getCourseCode(),
-
-                                packet.getCourse()
-                                        .getCourseName(),
-
+                                packet.getCourse().getCourseCode(),
+                                packet.getCourse().getCourseName(),
                                 schedule.getStatus(),
-
                                 packet.getDeadline()
-
                         )
                 );
             }
         }
 
+        return response;
+    }
+
+
+    // =========================================================
+    // PREVIOUS / ARCHIVED PACKETS
+    // =========================================================
+
+    public List<PreviousPacketResponseDTO> getPreviousPackets() {
+
+        List<ExamPacket> packets =
+                examPacketRepository.findByStatus("COMPLETED");
+
+        List<PreviousPacketResponseDTO> response =
+                new ArrayList<>();
+
+        for (ExamPacket packet : packets) {
+
+            if (packet == null) {
+                continue;
+            }
+
+            response.add(
+                    convertPreviousPacketToDTO(packet)
+            );
+        }
 
         return response;
+    }
+
+
+    // =========================================================
+    // PREVIOUS PACKET DTO CONVERTER
+    // =========================================================
+
+    private PreviousPacketResponseDTO convertPreviousPacketToDTO(
+            ExamPacket packet
+    ) {
+
+        String courseCode = null;
+        String courseName = null;
+        String departmentName = null;
+
+        if (packet.getCourse() != null) {
+
+            courseCode =
+                    packet.getCourse().getCourseCode();
+
+            courseName =
+                    packet.getCourse().getCourseName();
+
+            if (packet.getCourse().getDepartment() != null) {
+
+                departmentName =
+                        packet.getCourse()
+                                .getDepartment()
+                                .getDeptName();
+            }
+        }
+
+
+        Integer academicYear = null;
+        Integer semester = null;
+
+        if (packet.getAcademicCycle() != null) {
+
+            academicYear =
+                    packet.getAcademicCycle().getYear();
+
+            semester =
+                    packet.getAcademicCycle().getSemester();
+        }
+
+
+        String currentHolderName = null;
+
+        if (packet.getCurrentHolder() != null) {
+
+            currentHolderName =
+                    packet.getCurrentHolder().getName();
+        }
+
+
+        return PreviousPacketResponseDTO.builder()
+
+                .packetId(
+                        packet.getPacketId()
+                )
+
+                .courseCode(
+                        courseCode
+                )
+
+                .courseName(
+                        courseName
+                )
+
+                .departmentName(
+                        departmentName
+                )
+
+                .academicYear(
+                        academicYear
+                )
+
+                .semester(
+                        semester
+                )
+
+                .status(
+                        packet.getStatus()
+                )
+
+                .deadline(
+                        packet.getDeadline()
+                )
+
+                .currentHolderName(
+                        currentHolderName
+                )
+
+                .build();
     }
 }

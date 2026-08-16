@@ -36,6 +36,7 @@ public class LecturerPacketController {
 
     @GetMapping("/packets/previous")
     public ResponseEntity<List<PreviousPacketResponseDTO>> getPreviousPackets() {
+
         return ResponseEntity.ok(
                 lecturerPacketService.getPreviousPackets()
         );
