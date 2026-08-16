@@ -2,6 +2,7 @@ package com.exam_paper.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -24,6 +25,7 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String username;
+
     @Column(nullable = false)
     private String fullName;
 
@@ -34,4 +36,14 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    private String email;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    private LocalDateTime lastLogin;
+
+    @Column(nullable = false)
+    private boolean isActive = true;
 }
