@@ -1,14 +1,12 @@
 package com.exam_paper.backend.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
-
 @Entity
-@Table(name="comments")
+@Table(name = "comments")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,30 +14,50 @@ import java.time.LocalDateTime;
 @Builder
 public class Comment {
 
-
     @Id
-    @Column(length=50)
+    @Column(name = "comment_id")
     private String commentId;
 
+    // =========================================================
+    // PACKET
+    // =========================================================
 
-
-    @ManyToOne
-    @JoinColumn(name="packet_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "packet_id",
+            nullable = false
+    )
     private ExamPacket packet;
 
+    // =========================================================
+    // USER
+    // =========================================================
 
-
-    @ManyToOne
-    @JoinColumn(name="user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            nullable = false
+    )
     private User user;
 
+    // =========================================================
+    // COMMENT TEXT
+    // =========================================================
 
-
-    @Column(columnDefinition="TEXT")
+    @Column(
+            name = "comment_text",
+            nullable = false,
+            columnDefinition = "TEXT"
+    )
     private String commentText;
 
+    // =========================================================
+    // TIMESTAMP
+    // =========================================================
 
-
+    @Column(
+            name = "timestamp",
+            nullable = false
+    )
     private LocalDateTime timestamp;
-
 }

@@ -42,13 +42,14 @@ public class LecturerPacketController {
         );
     }
 
-    @GetMapping("/packets/{packetId}/movements")
+    @GetMapping("/{packetId}/movements")
     public ResponseEntity<List<PacketMovementResponseDTO>> getPacketMovementHistory(
             @PathVariable String packetId
     ) {
-        return ResponseEntity.ok(
-                lecturerPacketService.getPacketMovementHistory(packetId)
-        );
+        List<PacketMovementResponseDTO> history =
+                lecturerPacketService.getPacketMovementHistory(packetId);
+
+        return ResponseEntity.ok(history);
     }
 
     @GetMapping("/packets/search")

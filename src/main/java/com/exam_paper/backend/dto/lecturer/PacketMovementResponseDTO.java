@@ -1,31 +1,25 @@
 package com.exam_paper.backend.dto.lecturer;
 
-
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class PacketMovementResponseDTO {
-
 
     private String movementId;
 
+    private String fromUser; // Holds the sender's name/identifier
 
-    private String fromUser;
-
-
-    private String toUser;
-
+    private String toUser;   // Holds the receiver's name/identifier
 
     private String action;
 
-
     private LocalDateTime timestamp;
-
 }

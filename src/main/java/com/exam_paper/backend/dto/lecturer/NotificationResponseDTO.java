@@ -5,11 +5,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-
 @Data
 @AllArgsConstructor
 public class NotificationResponseDTO {
-
 
     private String notificationId;
 
@@ -20,5 +18,4 @@ public class NotificationResponseDTO {
     private String status;
 
     private LocalDateTime createdAt;
-
 }

@@ -24,4 +24,30 @@ public class LecturerNotificationController {
                 lecturerNotificationService.getNotifications(userId)
         );
     }
+
+    // =========================================================
+    // MARK ALL NOTIFICATIONS AS READ
+    // =========================================================
+    @PutMapping("/{userId}/notifications/read-all")
+    public ResponseEntity<Void> markAllAsRead(
+            @PathVariable String userId
+    ) {
+
+        lecturerNotificationService.markAllAsRead(userId);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{userId}/notifications/{notificationId}/read")
+    public ResponseEntity<Void> markNotificationAsRead(
+            @PathVariable String userId,
+            @PathVariable String notificationId
+    ) {
+        lecturerNotificationService.markNotificationAsRead(
+                userId,
+                notificationId
+        );
+
+        return ResponseEntity.ok().build();
+    }
 }

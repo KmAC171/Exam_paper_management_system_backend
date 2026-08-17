@@ -442,8 +442,8 @@ public class LecturerTaskService {
 
 
     // ============================================================
-    // PRINTING SCHEDULES
-    // ============================================================
+// PRINTING SCHEDULES
+// ============================================================
 
     public List<LecturerPrintingScheduleDTO> getPrintingSchedules(
             String lecturerId
@@ -453,57 +453,40 @@ public class LecturerTaskService {
                 packetAssignmentRepository
                         .findByUserUserId(lecturerId);
 
-
         List<LecturerPrintingScheduleDTO> response =
                 new ArrayList<>();
 
+        if (assignments == null || assignments.isEmpty()) {
+            return response;
+        }
 
         for (PacketAssignment assignment : assignments) {
 
-            /*
-             * Prevent null assignment.
-             */
             if (assignment == null) {
                 continue;
             }
 
-
-            /*
-             * Get packet.
-             */
-            ExamPacket packet =
-                    assignment.getPacket();
+            ExamPacket packet = assignment.getPacket();
 
             if (packet == null) {
                 continue;
             }
 
-
-            /*
-             * Get course.
-             */
-            Course course =
-                    packet.getCourse();
+            Course course = packet.getCourse();
 
             if (course == null) {
                 continue;
             }
 
-
-            /*
-             * Get printing schedules.
-             */
             List<PrintingSchedule> schedules =
                     printingScheduleRepository
                             .findByPacketPacketId(
                                     packet.getPacketId()
                             );
 
-
-            if (schedules == null) {
+            if (schedules == null || schedules.isEmpty()) {
                 continue;
             }
-
 
             for (PrintingSchedule schedule : schedules) {
 
@@ -511,26 +494,17 @@ public class LecturerTaskService {
                     continue;
                 }
 
-
                 response.add(
-
                         new LecturerPrintingScheduleDTO(
-
                                 packet.getPacketId(),
-
                                 course.getCourseCode(),
-
                                 course.getCourseName(),
-
                                 schedule.getStatus(),
-
                                 packet.getDeadline()
-
                         )
                 );
             }
         }
-
 
         return response;
     }

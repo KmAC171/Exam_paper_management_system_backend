@@ -1,6 +1,6 @@
 package com.exam_paper.backend.service.lecturer;
 
-import com.exam_paper.backend.dto.lecturer.*;
+import com.exam_paper.backend.dto.lecturer.CommentResponseDTO;
 import com.exam_paper.backend.entity.Comment;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.entity.User;
@@ -21,204 +21,181 @@ public class LecturerCommentService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
 
+    // =========================================================
+    // ADD COMMENT
+    // =========================================================
 
     public CommentResponseDTO addComment(
             String packetId,
             String userId,
-            String text
+            String commentText
     ) {
 
-        ExamPacket packet =
-                examPacketRepository
-                        .findById(packetId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Packet not found"
-                                )
+        // -----------------------------------------------------
+        // Validate packet
+        // -----------------------------------------------------
+
+        if (packetId == null || packetId.trim().isEmpty()) {
+            throw new RuntimeException("Packet ID is required");
+        }
+
+        ExamPacket packet = examPacketRepository
+                .findById(packetId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Packet not found: " + packetId
+                        )
+                );
+
+        // -----------------------------------------------------
+        // Validate user
+        // -----------------------------------------------------
+
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new RuntimeException("User ID is required");
+        }
+
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found: " + userId
+                        )
+                );
+
+        // -----------------------------------------------------
+        // Validate comment
+        // -----------------------------------------------------
+
+        if (commentText == null || commentText.trim().isEmpty()) {
+            throw new RuntimeException(
+                    "Comment text is required"
+            );
+        }
+
+        // -----------------------------------------------------
+        // Create comment
+        // -----------------------------------------------------
+
+        Comment comment = Comment.builder()
+
+                .commentId(generateCommentId())
+
+                .packet(packet)
+
+                .user(user)
+
+                .commentText(commentText.trim())
+
+                .timestamp(LocalDateTime.now())
+
+                .build();
+
+        // -----------------------------------------------------
+        // Save
+        // -----------------------------------------------------
+
+        Comment saved = commentRepository.save(comment);
+
+        // -----------------------------------------------------
+        // Convert entity -> DTO
+        // -----------------------------------------------------
+
+        return convertToDTO(saved);
+    }
+
+    // =========================================================
+    // GET COMMENTS FOR PACKET
+    // =========================================================
+
+    public List<CommentResponseDTO> getPacketComments(
+            String packetId
+    ) {
+
+        if (packetId == null || packetId.trim().isEmpty()) {
+            throw new RuntimeException("Packet ID is required");
+        }
+
+        // Make sure packet exists
+        examPacketRepository
+                .findById(packetId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Packet not found: " + packetId
+                        )
+                );
+
+        List<Comment> comments =
+                commentRepository
+                        .findByPacketPacketIdOrderByTimestampAsc(
+                                packetId
                         );
 
+        return comments.stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
 
-        User user =
-                userRepository
-                        .findById(userId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "User not found"
-                                )
-                        );
+    // =========================================================
+    // ENTITY -> DTO
+    // =========================================================
 
-
-        Comment comment =
-                Comment.builder()
-
-                        .commentId(
-                                "CMT" +
-                                        System.currentTimeMillis()
-                        )
-
-                        .packet(packet)
-
-                        .user(user)
-
-                        .commentText(text)
-
-                        .timestamp(
-                                LocalDateTime.now()
-                        )
-
-                        .build();
-
-
-        Comment saved =
-                commentRepository.save(comment);
-
+    private CommentResponseDTO convertToDTO(
+            Comment comment
+    ) {
 
         return CommentResponseDTO.builder()
 
                 .commentId(
-                        saved.getCommentId()
+                        comment.getCommentId()
                 )
 
                 .packetId(
-                        saved.getPacket()
-                                .getPacketId()
+                        comment.getPacket() != null
+                                ? comment.getPacket().getPacketId()
+                                : null
                 )
 
                 .userId(
-                        saved.getUser()
-                                .getUserId()
+                        comment.getUser() != null
+                                ? comment.getUser().getUserId()
+                                : null
                 )
 
                 .userName(
-                        saved.getUser()
-                                .getName()
+                        comment.getUser() != null
+                                ? comment.getUser().getName()
+                                : "Unknown User"
                 )
 
                 .commentText(
-                        saved.getCommentText()
+                        comment.getCommentText()
                 )
 
                 .timestamp(
-                        saved.getTimestamp()
+                        comment.getTimestamp()
                 )
 
                 .build();
     }
 
-
-    /*
-        Add comment using request DTO
-    */
-    public Comment addComment(
-            AddCommentRequestDTO request
-    ) {
-
-        ExamPacket packet =
-                examPacketRepository
-                        .findById(
-                                request.getPacketId()
-                        )
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Packet not found"
-                                )
-                        );
-
-
-        User user =
-                userRepository
-                        .findById(
-                                request.getUserId()
-                        )
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "User not found"
-                                )
-                        );
-
-
-        Comment comment =
-                Comment.builder()
-
-                        .commentId(
-                                generateCommentId()
-                        )
-
-                        .packet(packet)
-
-                        .user(user)
-
-                        .commentText(
-                                request.getCommentText()
-                        )
-
-                        .timestamp(
-                                LocalDateTime.now()
-                        )
-
-                        .build();
-
-
-        return commentRepository.save(comment);
-    }
-
+    // =========================================================
+    // GENERATE COMMENT ID
+    // =========================================================
 
     private String generateCommentId() {
 
-        long count =
-                commentRepository.count();
+        long count = commentRepository.count();
 
-        return "CMT" + (count + 1);
-    }
+        String commentId;
 
+        do {
+            count++;
 
-    /*
-        View all comments of a packet
-    */
-    public List<CommentResponseDTO> getPacketComments(
-            String packetId
-    ) {
+            commentId = "CMT" + count;
 
-        List<Comment> comments =
-                commentRepository
-                        .findByPacketPacketId(packetId);
+        } while (commentRepository.existsById(commentId));
 
-
-        return comments.stream()
-
-                .map(comment ->
-                        CommentResponseDTO.builder()
-
-                                .commentId(
-                                        comment.getCommentId()
-                                )
-
-                                .commentText(
-                                        comment.getCommentText()
-                                )
-
-                                .timestamp(
-                                        comment.getTimestamp()
-                                )
-
-                                .packetId(
-                                        comment.getPacket()
-                                                .getPacketId()
-                                )
-
-                                .userId(
-                                        comment.getUser()
-                                                .getUserId()
-                                )
-
-                                .userName(
-                                        comment.getUser()
-                                                .getName()
-                                )
-
-                                .build()
-                )
-
-                .toList();
+        return commentId;
     }
 }

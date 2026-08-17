@@ -18,6 +18,7 @@ public interface CommentRepository
 
     // Get all comments related to one packet
     List<Comment> findByPacketPacketId(String packetId);
+    List<Comment> findByPacketPacketIdOrderByTimestampAsc(String packetId);
 
 
 }
