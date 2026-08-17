@@ -1,6 +1,7 @@
 package com.exam_paper.backend.controller.hod;
 
 import com.exam_paper.backend.dto.hod.DepartmentPacketResponseDto;
+import com.exam_paper.backend.dto.hod.DepartmentStatsDto;
 import com.exam_paper.backend.dto.hod.PacketDetailDto;
 import com.exam_paper.backend.service.hod.PacketWorkflowService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,11 @@ public class PacketWorkflowController {
     @GetMapping("/department/{deptId}/packets")
     public ResponseEntity<List<DepartmentPacketResponseDto>> getAllDepartmentPackets(@PathVariable String deptId) {
         return ResponseEntity.ok(packetWorkflowService.getAllDepartmentPackets(deptId));
+    }
+
+    @GetMapping("/department/{deptId}/statistics")
+    public ResponseEntity<DepartmentStatsDto> getDepartmentStatistics(@PathVariable String deptId) {
+        return ResponseEntity.ok(packetWorkflowService.getDepartmentStatistics(deptId));
     }
 
     @GetMapping("/department/{deptId}/packets/search")

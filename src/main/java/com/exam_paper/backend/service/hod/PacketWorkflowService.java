@@ -7,6 +7,7 @@ import com.exam_paper.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +25,22 @@ public class PacketWorkflowService {
                         && deptId.equalsIgnoreCase(p.getCourse().getDepartment().getDeptId()))
                 .map(this::mapToPacketResponseDto)
                 .collect(Collectors.toList());
+    }
+
+    public DepartmentStatsDto getDepartmentStatistics(String deptId) {
+        List<DepartmentPacketResponseDto> packets = getAllDepartmentPackets(deptId);
+
+        long total = packets.size();
+        long completed = packets.stream().filter(p -> "Completed".equalsIgnoreCase(p.getStatus())).count();
+        long overdue = packets.stream().filter(DepartmentPacketResponseDto::isOverdue).count();
+        long inProgress = total - completed;
+
+        return DepartmentStatsDto.builder()
+                .totalPackets(total)
+                .completedPackets(completed)
+                .overduePackets(overdue)
+                .inProgressPackets(inProgress)
+                .build();
     }
 
     public List<DepartmentPacketResponseDto> filterAndSearchPackets(
@@ -112,7 +129,7 @@ public class PacketWorkflowService {
 
     public DepartmentPacketResponseDto mapToPacketResponseDto(ExamPacket packet) {
         boolean isOverdue = packet.getDeadline() != null &&
-                packet.getDeadline().isBefore(java.time.LocalDate.now()) &&
+                packet.getDeadline().isBefore(LocalDate.now()) &&
                 !"Completed".equalsIgnoreCase(packet.getStatus());
 
         return DepartmentPacketResponseDto.builder()
