@@ -1,20 +1,21 @@
 package com.exam_paper.backend.service.lecturer;
 
 import com.exam_paper.backend.dto.lecturer.*;
-import com.exam_paper.backend.entity.ExamPacket;
-import com.exam_paper.backend.entity.PacketAssignment;
-import com.exam_paper.backend.entity.Marking;
 import com.exam_paper.backend.entity.Course;
+import com.exam_paper.backend.entity.ExamPacket;
+import com.exam_paper.backend.entity.Marking;
+import com.exam_paper.backend.entity.PacketAssignment;
 import com.exam_paper.backend.entity.PrintingSchedule;
 import com.exam_paper.backend.repository.ExamPacketRepository;
-import com.exam_paper.backend.repository.PacketAssignmentRepository;
 import com.exam_paper.backend.repository.MarkingRepository;
+import com.exam_paper.backend.repository.PacketAssignmentRepository;
 import com.exam_paper.backend.repository.PrintingScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -27,9 +28,9 @@ public class LecturerTaskService {
     private final PrintingScheduleRepository printingScheduleRepository;
 
 
-    // =========================================================
+    // ============================================================
     // UPDATE PACKET STATUS
-    // =========================================================
+    // ============================================================
 
     public String updatePacketStatus(
             String packetId,
@@ -39,10 +40,20 @@ public class LecturerTaskService {
         ExamPacket packet = examPacketRepository
                 .findById(packetId)
                 .orElseThrow(
-                        () -> new RuntimeException("Packet not found")
+                        () -> new RuntimeException(
+                                "Packet not found: " + packetId
+                        )
                 );
 
-        packet.setStatus(request.getStatus());
+        if (request == null || request.getStatus() == null) {
+            throw new RuntimeException(
+                    "Status is required"
+            );
+        }
+
+        packet.setStatus(
+                request.getStatus()
+        );
 
         examPacketRepository.save(packet);
 
@@ -50,33 +61,53 @@ public class LecturerTaskService {
     }
 
 
-    // =========================================================
+    // ============================================================
     // COMPLETE TASK
-    // =========================================================
+    // ============================================================
 
-    public CompleteTaskResponseDTO completeTask(String packetId) {
+    public CompleteTaskResponseDTO completeTask(
+            String packetId
+    ) {
 
         ExamPacket packet = examPacketRepository
                 .findById(packetId)
                 .orElseThrow(
-                        () -> new RuntimeException("Packet not found")
+                        () -> new RuntimeException(
+                                "Packet not found: " + packetId
+                        )
                 );
 
+        /*
+         * Use one consistent status value.
+         *
+         * Your frontend/database should preferably use:
+         * COMPLETED
+         */
         packet.setStatus("COMPLETED");
 
         examPacketRepository.save(packet);
 
         return CompleteTaskResponseDTO.builder()
-                .packetId(packet.getPacketId())
-                .status(packet.getStatus())
-                .message("Task marked as completed successfully")
+
+                .packetId(
+                        packet.getPacketId()
+                )
+
+                .status(
+                        packet.getStatus()
+                )
+
+                .message(
+                        "Task marked as completed successfully"
+                )
+
                 .build();
     }
 
 
-    // =========================================================
+    // ============================================================
     // TASK SUMMARY
-    // =========================================================
+    // ============================================================
 
     public LecturerTaskSummaryResponseDTO getTaskSummary(
             String lecturerId
@@ -92,35 +123,61 @@ public class LecturerTaskService {
 
         LocalDate today = LocalDate.now();
 
+
         for (PacketAssignment assignment : assignments) {
 
-            if (assignment == null ||
-                    assignment.getPacket() == null) {
+            /*
+             * Prevent NullPointerException
+             */
+            if (assignment == null) {
                 continue;
             }
 
-            ExamPacket packet = assignment.getPacket();
+            ExamPacket packet =
+                    assignment.getPacket();
 
-            String status = packet.getStatus();
+            if (packet == null) {
+                continue;
+            }
 
-            LocalDate deadline = packet.getDeadline();
 
+            String status =
+                    packet.getStatus();
+
+            LocalDate deadline =
+                    packet.getDeadline();
+
+
+            /*
+             * COMPLETED
+             */
             if ("COMPLETED".equalsIgnoreCase(status)) {
 
                 completed++;
 
-            } else if (
+            }
+
+            /*
+             * OVERDUE
+             */
+            else if (
                     deadline != null &&
                             deadline.isBefore(today)
             ) {
 
                 overdue++;
 
-            } else {
+            }
+
+            /*
+             * PENDING
+             */
+            else {
 
                 pending++;
             }
         }
+
 
         return new LecturerTaskSummaryResponseDTO(
                 lecturerId,
@@ -131,9 +188,9 @@ public class LecturerTaskService {
     }
 
 
-    // =========================================================
+    // ============================================================
     // WORKLOAD STATISTICS
-    // =========================================================
+    // ============================================================
 
     public LecturerWorkloadStatisticsDTO getWorkloadStatistics(
             String lecturerId
@@ -147,70 +204,114 @@ public class LecturerTaskService {
                 markingRepository
                         .findByLecturerUserId(lecturerId);
 
-        long totalAssignedPackets = assignments.size();
+
+        long totalAssignedPackets = 0;
 
         long completedPackets = 0;
+
         long pendingPackets = 0;
+
         long overduePackets = 0;
+
 
         LocalDate today = LocalDate.now();
 
+
+        /*
+         * Count only assignments that actually
+         * contain a packet.
+         */
         for (PacketAssignment assignment : assignments) {
 
-            if (assignment == null ||
-                    assignment.getPacket() == null) {
+            if (assignment == null) {
                 continue;
             }
 
-            ExamPacket packet = assignment.getPacket();
+            ExamPacket packet =
+                    assignment.getPacket();
 
-            String status = packet.getStatus();
+            if (packet == null) {
+                continue;
+            }
 
+
+            totalAssignedPackets++;
+
+
+            String status =
+                    packet.getStatus();
+
+            LocalDate deadline =
+                    packet.getDeadline();
+
+
+            /*
+             * COMPLETED
+             */
             if ("COMPLETED".equalsIgnoreCase(status)) {
 
                 completedPackets++;
 
-            } else if (
-                    packet.getDeadline() != null &&
-                            packet.getDeadline().isBefore(today)
+            }
+
+            /*
+             * OVERDUE
+             */
+            else if (
+                    deadline != null &&
+                            deadline.isBefore(today)
             ) {
 
                 overduePackets++;
 
-            } else {
+            }
+
+            /*
+             * PENDING
+             */
+            else {
 
                 pendingPackets++;
             }
         }
 
 
-        // =====================================================
-        // SCRIPT COUNTS
-        // =====================================================
+        // ========================================================
+        // TOTAL SCRIPTS
+        // ========================================================
 
         int totalScripts = 0;
+
 
         if (markings != null) {
 
             for (Marking marking : markings) {
 
-                if (marking != null &&
-                        marking.getTotalScripts() != null) {
+                if (marking == null) {
+                    continue;
+                }
 
-                    totalScripts += marking.getTotalScripts();
+                if (marking.getTotalScripts() != null) {
+
+                    totalScripts +=
+                            marking.getTotalScripts();
                 }
             }
         }
 
 
         /*
-         * At the moment your Marking entity does not contain a
-         * markedScripts value, so this remains zero.
+         * At the moment markedScripts tracking
+         * has not been implemented.
          */
         int markedScripts = 0;
 
+
         int remainingScripts =
-                Math.max(0, totalScripts - markedScripts);
+                Math.max(
+                        totalScripts - markedScripts,
+                        0
+                );
 
 
         return new LecturerWorkloadStatisticsDTO(
@@ -226,9 +327,9 @@ public class LecturerTaskService {
     }
 
 
-    // =========================================================
+    // ============================================================
     // DEADLINE CALENDAR
-    // =========================================================
+    // ============================================================
 
     public List<LecturerDeadlineCalendarDTO> getDeadlineCalendar(
             String lecturerId
@@ -238,42 +339,111 @@ public class LecturerTaskService {
                 packetAssignmentRepository
                         .findByUserUserId(lecturerId);
 
+
         List<LecturerDeadlineCalendarDTO> deadlines =
                 new ArrayList<>();
 
+
+        /*
+         * Today's date.
+         */
+        LocalDate today =
+                LocalDate.now();
+
+
         for (PacketAssignment assignment : assignments) {
 
-            if (assignment == null ||
-                    assignment.getPacket() == null) {
+            /*
+             * Prevent null assignment.
+             */
+            if (assignment == null) {
                 continue;
             }
 
-            ExamPacket packet = assignment.getPacket();
 
-            Course course = packet.getCourse();
+            /*
+             * Prevent null packet.
+             */
+            ExamPacket packet =
+                    assignment.getPacket();
+
+            if (packet == null) {
+                continue;
+            }
+
+
+            /*
+             * Packet must have a deadline.
+             */
+            if (packet.getDeadline() == null) {
+                continue;
+            }
+
+
+            /*
+             * Packet must have a course.
+             */
+            Course course =
+                    packet.getCourse();
 
             if (course == null) {
                 continue;
             }
 
+
+            /*
+             * Only show upcoming deadlines.
+             *
+             * Example:
+             *
+             * Today = 2026-08-16
+             *
+             * 2026-08-10 -> ignored
+             * 2026-08-15 -> ignored
+             * 2026-08-16 -> included
+             * 2026-08-20 -> included
+             */
+            if (packet.getDeadline().isBefore(today)) {
+                continue;
+            }
+
+
             deadlines.add(
+
                     new LecturerDeadlineCalendarDTO(
+
                             packet.getPacketId(),
+
                             course.getCourseCode(),
+
                             course.getCourseName(),
+
                             packet.getDeadline(),
+
                             packet.getStatus()
+
                     )
             );
         }
+
+
+        /*
+         * Sort by nearest deadline first.
+         */
+        deadlines.sort(
+                Comparator.comparing(
+                        LecturerDeadlineCalendarDTO::getDeadline
+                )
+        );
+
 
         return deadlines;
     }
 
 
-    // =========================================================
+    // ============================================================
     // PRINTING SCHEDULES
-    // =========================================================
+    // ============================================================
 
     public List<LecturerPrintingScheduleDTO> getPrintingSchedules(
             String lecturerId
@@ -283,31 +453,57 @@ public class LecturerTaskService {
                 packetAssignmentRepository
                         .findByUserUserId(lecturerId);
 
+
         List<LecturerPrintingScheduleDTO> response =
                 new ArrayList<>();
 
+
         for (PacketAssignment assignment : assignments) {
 
-            if (assignment == null ||
-                    assignment.getPacket() == null) {
+            /*
+             * Prevent null assignment.
+             */
+            if (assignment == null) {
                 continue;
             }
 
-            ExamPacket packet = assignment.getPacket();
 
-            if (packet.getCourse() == null) {
+            /*
+             * Get packet.
+             */
+            ExamPacket packet =
+                    assignment.getPacket();
+
+            if (packet == null) {
                 continue;
             }
 
+
+            /*
+             * Get course.
+             */
+            Course course =
+                    packet.getCourse();
+
+            if (course == null) {
+                continue;
+            }
+
+
+            /*
+             * Get printing schedules.
+             */
             List<PrintingSchedule> schedules =
                     printingScheduleRepository
                             .findByPacketPacketId(
                                     packet.getPacketId()
                             );
 
+
             if (schedules == null) {
                 continue;
             }
+
 
             for (PrintingSchedule schedule : schedules) {
 
@@ -315,139 +511,27 @@ public class LecturerTaskService {
                     continue;
                 }
 
+
                 response.add(
+
                         new LecturerPrintingScheduleDTO(
+
                                 packet.getPacketId(),
-                                packet.getCourse().getCourseCode(),
-                                packet.getCourse().getCourseName(),
+
+                                course.getCourseCode(),
+
+                                course.getCourseName(),
+
                                 schedule.getStatus(),
+
                                 packet.getDeadline()
+
                         )
                 );
             }
         }
 
-        return response;
-    }
-
-
-    // =========================================================
-    // PREVIOUS / ARCHIVED PACKETS
-    // =========================================================
-
-    public List<PreviousPacketResponseDTO> getPreviousPackets() {
-
-        List<ExamPacket> packets =
-                examPacketRepository.findByStatus("COMPLETED");
-
-        List<PreviousPacketResponseDTO> response =
-                new ArrayList<>();
-
-        for (ExamPacket packet : packets) {
-
-            if (packet == null) {
-                continue;
-            }
-
-            response.add(
-                    convertPreviousPacketToDTO(packet)
-            );
-        }
 
         return response;
-    }
-
-
-    // =========================================================
-    // PREVIOUS PACKET DTO CONVERTER
-    // =========================================================
-
-    private PreviousPacketResponseDTO convertPreviousPacketToDTO(
-            ExamPacket packet
-    ) {
-
-        String courseCode = null;
-        String courseName = null;
-        String departmentName = null;
-
-        if (packet.getCourse() != null) {
-
-            courseCode =
-                    packet.getCourse().getCourseCode();
-
-            courseName =
-                    packet.getCourse().getCourseName();
-
-            if (packet.getCourse().getDepartment() != null) {
-
-                departmentName =
-                        packet.getCourse()
-                                .getDepartment()
-                                .getDeptName();
-            }
-        }
-
-
-        Integer academicYear = null;
-        Integer semester = null;
-
-        if (packet.getAcademicCycle() != null) {
-
-            academicYear =
-                    packet.getAcademicCycle().getYear();
-
-            semester =
-                    packet.getAcademicCycle().getSemester();
-        }
-
-
-        String currentHolderName = null;
-
-        if (packet.getCurrentHolder() != null) {
-
-            currentHolderName =
-                    packet.getCurrentHolder().getName();
-        }
-
-
-        return PreviousPacketResponseDTO.builder()
-
-                .packetId(
-                        packet.getPacketId()
-                )
-
-                .courseCode(
-                        courseCode
-                )
-
-                .courseName(
-                        courseName
-                )
-
-                .departmentName(
-                        departmentName
-                )
-
-                .academicYear(
-                        academicYear
-                )
-
-                .semester(
-                        semester
-                )
-
-                .status(
-                        packet.getStatus()
-                )
-
-                .deadline(
-                        packet.getDeadline()
-                )
-
-                .currentHolderName(
-                        currentHolderName
-                )
-
-                .build();
     }
 }
