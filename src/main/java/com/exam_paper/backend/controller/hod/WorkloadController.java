@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/hod")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class WorkloadController {
 
     private final WorkloadService workloadService;

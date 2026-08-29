@@ -12,7 +12,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/hod")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CommentController {
 
     private final CommentService commentService;

@@ -11,7 +11,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/hod")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class OverdueTrackingController {
 
     private final OverdueTrackingService overdueTrackingService;
