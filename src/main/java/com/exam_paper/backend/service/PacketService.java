@@ -1,11 +1,16 @@
 package com.exam_paper.backend.service;
 
+import com.exam_paper.backend.dto.CreatePacketDTO;
 import com.exam_paper.backend.dto.PacketDTO;
 import com.exam_paper.backend.dto.PacketDetailDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.entity.User;
 import com.exam_paper.backend.repository.PacketRepository;
 import com.exam_paper.backend.repository.UserRepository;
+import com.exam_paper.backend.entity.Course;
+import com.exam_paper.backend.entity.PacketStatus;
+import com.exam_paper.backend.repository.CourseRepository;
+import com.exam_paper.backend.repository.PacketStatusRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +23,8 @@ import java.util.stream.Collectors;
 public class PacketService {
     private final PacketRepository packetRepository;
     private final UserRepository userRepository;
+    private final CourseRepository courseRepository;
+    private final PacketStatusRepository packetStatusRepository;
 
     public List<PacketDTO> getPackets(String username, String role) {
         User user = userRepository.findByUsername(username)
@@ -120,4 +127,65 @@ public class PacketService {
                 priority
         );
     }
-}
+
+    public PacketDTO createPacket(CreatePacketDTO dto) {
+        Course course = courseRepository.findById(dto.getCourseId())
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+        User lecturer = userRepository.findById(dto.getLecturerId())
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+        User moderator = userRepository.findById(dto.getModeratorId())
+                .orElseThrow(() -> new RuntimeException("Moderator not found"));
+        PacketStatus status = packetStatusRepository.findById(dto.getStatusId())
+                .orElseThrow(() -> new RuntimeException("Status not found"));
+        ExamPacket packet = new ExamPacket();
+        packet.setCourse(course);
+        packet.setLecturer(lecturer);
+        packet.setModerator(moderator);
+        packet.setStatus(status);
+        packet.setDeadline(dto.getDeadline());
+        packet.setModerationDeadline(dto.getModerationDeadline());
+        packet.setExamDate(dto.getExamDate());
+        packet.setDuration(dto.getDuration());
+        packet.setTotalMarks(dto.getTotalMarks());
+        packet.setQuestions(dto.getQuestions());
+        packet.setFormat(dto.getFormat());
+        packet.setModeratorNote(dto.getModeratorNote());
+
+        ExamPacket saved = packetRepository.save(packet);
+        return toDTO(saved);
+    }
+
+    public PacketDTO updatePacket(Long id, CreatePacketDTO dto) {
+        ExamPacket packet = packetRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Packet not found"));
+
+        Course course = courseRepository.findById(dto.getCourseId())
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+        User lecturer = userRepository.findById(dto.getLecturerId())
+                .orElseThrow(() -> new RuntimeException("Lecturer not found"));
+        User moderator = userRepository.findById(dto.getModeratorId())
+                .orElseThrow(() -> new RuntimeException("Moderator not found"));
+        PacketStatus status = packetStatusRepository.findById(dto.getStatusId())
+                .orElseThrow(() -> new RuntimeException("Status not found"));
+
+        packet.setCourse(course);
+        packet.setLecturer(lecturer);
+        packet.setModerator(moderator);
+        packet.setStatus(status);
+        packet.setDeadline(dto.getDeadline());
+        packet.setModerationDeadline(dto.getModerationDeadline());
+        packet.setExamDate(dto.getExamDate());
+        packet.setDuration(dto.getDuration());
+        packet.setTotalMarks(dto.getTotalMarks());
+        packet.setQuestions(dto.getQuestions());
+        packet.setFormat(dto.getFormat());
+        packet.setModeratorNote(dto.getModeratorNote());
+
+        ExamPacket saved = packetRepository.save(packet);
+        return toDTO(saved);
+    }
+
+    public void deletePacket(Long id) {
+        packetRepository.deleteById(id);
+    }
+    }
