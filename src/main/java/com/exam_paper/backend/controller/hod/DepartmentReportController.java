@@ -16,12 +16,12 @@ public class DepartmentReportController {
 
     private final DepartmentReportService departmentReportService;
 
-    @GetMapping("/department/{deptId}/report")
+    @GetMapping({"/department/{deptId}/report", "/department/{deptId}/reports"})
     public ResponseEntity<DepartmentReportDto> getDepartmentReport(@PathVariable String deptId) {
         return ResponseEntity.ok(departmentReportService.generateDepartmentReport(deptId));
     }
 
-    @GetMapping("/department/{deptId}/report/export/excel")
+    @GetMapping({"/department/{deptId}/report/export/excel", "/department/{deptId}/reports/export/excel"})
     public ResponseEntity<byte[]> exportReportExcel(@PathVariable String deptId) {
         byte[] excelData = departmentReportService.exportDepartmentReportExcel(deptId);
         return ResponseEntity.ok()
@@ -30,7 +30,7 @@ public class DepartmentReportController {
                 .body(excelData);
     }
 
-    @GetMapping("/department/{deptId}/report/export/pdf")
+    @GetMapping({"/department/{deptId}/report/export/pdf", "/department/{deptId}/reports/export/pdf"})
     public ResponseEntity<byte[]> exportReportPdf(@PathVariable String deptId) {
         byte[] pdfData = departmentReportService.exportDepartmentReportPdf(deptId);
         return ResponseEntity.ok()

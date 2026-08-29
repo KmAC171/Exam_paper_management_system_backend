@@ -3,12 +3,14 @@ package com.exam_paper.backend.service.hod;
 import com.exam_paper.backend.dto.hod.DepartmentPacketResponseDto;
 import com.exam_paper.backend.dto.hod.DepartmentReportDto;
 import com.exam_paper.backend.dto.hod.LecturerWorkloadDto;
+import com.exam_paper.backend.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -17,21 +19,25 @@ public class DepartmentReportService {
     private final PacketWorkflowService packetWorkflowService;
     private final OverdueTrackingService overdueTrackingService;
     private final WorkloadService workloadService;
+    private final DepartmentRepository departmentRepository;
 
     public DepartmentReportDto generateDepartmentReport(String deptId) {
         List<DepartmentPacketResponseDto> packets = packetWorkflowService.getAllDepartmentPackets(deptId);
 
         long total = packets.size();
-        long pending = packets.stream().filter(p -> "Pending".equalsIgnoreCase(p.getStatus())).count();
-        long inProgress = packets.stream().filter(p -> "In Progress".equalsIgnoreCase(p.getStatus())).count();
-        long completed = packets.stream().filter(p -> "Completed".equalsIgnoreCase(p.getStatus())).count();
+        long pending = packets.stream().filter(p -> "PENDING".equals(normalizeStatus(p.getStatus()))).count();
+        long completed = packets.stream().filter(p -> "COMPLETED".equals(normalizeStatus(p.getStatus()))).count();
+        long inProgress = Math.max(total - pending - completed, 0);
         long overdue = overdueTrackingService.getOverduePackets(deptId).size();
 
         List<LecturerWorkloadDto> workloads = workloadService.getDepartmentWorkload(deptId);
+        String departmentName = departmentRepository.findById(deptId)
+                .map(department -> department.getDeptName())
+                .orElse(deptId);
 
         return DepartmentReportDto.builder()
                 .departmentId(deptId)
-                .departmentName(deptId)
+                .departmentName(departmentName)
                 .totalPackets(total)
                 .pendingPackets(pending)
                 .inProgressPackets(inProgress)
@@ -89,5 +95,15 @@ public class DepartmentReportService {
         }
 
         return pdfText.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "UNKNOWN";
+        }
+        return status.trim()
+                .replace(' ', '_')
+                .replace('-', '_')
+                .toUpperCase(Locale.ROOT);
     }
 }

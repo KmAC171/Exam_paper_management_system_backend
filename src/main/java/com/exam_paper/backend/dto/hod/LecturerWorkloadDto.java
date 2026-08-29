@@ -12,6 +12,12 @@ import lombok.NoArgsConstructor;
 public class LecturerWorkloadDto {
     private String lecturerId;
     private String lecturerName;
+    private long paperSetting;
+    private long moderating;
+    private long marking;
+    private long secondMarking;
+    private long completed;
+    private long overdue;
     private long totalAssignedPackets;
     private long totalScripts;
     private long markedScripts;

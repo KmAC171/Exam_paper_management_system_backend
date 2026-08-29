@@ -32,10 +32,12 @@ public class PacketWorkflowController {
     public ResponseEntity<List<DepartmentPacketResponseDto>> searchPackets(
             @PathVariable String deptId,
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String cycleId,
             @RequestParam(required = false) String lecturerId) {
-        return ResponseEntity.ok(packetWorkflowService.filterAndSearchPackets(deptId, query, status, cycleId, lecturerId));
+        String searchQuery = (query != null && !query.isBlank()) ? query : keyword;
+        return ResponseEntity.ok(packetWorkflowService.filterAndSearchPackets(deptId, searchQuery, status, cycleId, lecturerId));
     }
 
     @GetMapping("/packet/{packetId}")
