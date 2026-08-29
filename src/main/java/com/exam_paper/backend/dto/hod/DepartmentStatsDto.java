@@ -1,13 +1,11 @@
 package com.exam_paper.backend.dto.hod;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
-@Data
-@Builder
+@Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class DepartmentStatsDto {
     private long totalPackets;
-    private long inProgressPackets;
-    private long overduePackets;
     private long completedPackets;
+    private long overduePackets;
+    private long inProgressPackets;
 }

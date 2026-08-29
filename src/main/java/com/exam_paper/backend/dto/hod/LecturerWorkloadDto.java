@@ -1,14 +1,8 @@
 package com.exam_paper.backend.dto.hod;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @NoArgsConstructor @AllArgsConstructor @Builder
 public class LecturerWorkloadDto {
     private String lecturerId;
     private String lecturerName;
