@@ -61,23 +61,32 @@ public class UserManagementService {
     }
 
     private UserManagementDTO toDTO(User u) {
-        String initials = u.getFullName() != null
-                ? u.getFullName().split(" ")[0].substring(0, 1)
-                + (u.getFullName().split(" ").length > 1
-                ? u.getFullName().split(" ")[1].substring(0, 1) : "")
-                : "??";
+        String initials = "??";
+        if (u.getFullName() != null && !u.getFullName().trim().isEmpty()) {
+            String[] parts = u.getFullName().trim().split("\\s+");
+            if (parts.length > 1 && !parts[1].isEmpty()) {
+                initials = parts[0].substring(0, 1) + parts[1].substring(0, 1);
+            } else if (parts[0].length() >= 2) {
+                initials = parts[0].substring(0, 2);
+            } else {
+                initials = parts[0].substring(0, 1);
+            }
+        }
 
         int colorIndex = Math.abs(u.getFullName() != null
                 ? u.getFullName().hashCode() % AVATAR_COLORS.size() : 0);
         String avatarColor = AVATAR_COLORS.get(Math.abs(colorIndex));
+
+        String roleName = u.getRole() != null ? u.getRole().name() : "";
+        String roleLabel = u.getRole() != null ? ROLE_LABELS.getOrDefault(roleName, roleName) : "";
 
         return new UserManagementDTO(
                 u.getUserId(),
                 u.getFullName(),
                 u.getUsername(),
                 u.getEmail() != null ? u.getEmail() : "",
-                u.getRole().name(),
-                ROLE_LABELS.getOrDefault(u.getRole().name(), u.getRole().name()),
+                roleName,
+                roleLabel,
                 u.getDepartment() != null ? u.getDepartment().getDepartmentName() : "—",
                 u.isActive(),
                 formatLastLogin(u.getLastLogin()),
