@@ -3,9 +3,15 @@ package com.exam_paper.backend.service.hod;
 import com.exam_paper.backend.dto.hod.DepartmentPacketResponseDto;
 import com.exam_paper.backend.dto.hod.DepartmentReportDto;
 import com.exam_paper.backend.dto.hod.LecturerWorkloadDto;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -66,28 +72,41 @@ public class DepartmentReportService {
 
     public byte[] exportDepartmentReportPdf(String deptId) {
         DepartmentReportDto report = generateDepartmentReport(deptId);
-        StringBuilder pdfText = new StringBuilder();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
-        pdfText.append("=====================================================\n");
-        pdfText.append("          DEPARTMENT ACADEMIC REPORT                 \n");
-        pdfText.append("=====================================================\n\n");
-        pdfText.append("Department ID: ").append(report.getDepartmentId()).append("\n");
-        pdfText.append("Generated At: ").append(LocalDateTime.now()).append("\n\n");
-        pdfText.append("SUMMARY STATISTICS:\n");
-        pdfText.append("-----------------------------------------------------\n");
-        pdfText.append("Total Exam Packets : ").append(report.getTotalPackets()).append("\n");
-        pdfText.append("Pending Packets     : ").append(report.getPendingPackets()).append("\n");
-        pdfText.append("In Progress Packets : ").append(report.getInProgressPackets()).append("\n");
-        pdfText.append("Completed Packets   : ").append(report.getCompletedPackets()).append("\n");
-        pdfText.append("Overdue Packets     : ").append(report.getOverduePackets()).append("\n\n");
-        pdfText.append("LECTURER MARKING PROGRESS:\n");
-        pdfText.append("-----------------------------------------------------\n");
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdfDoc = new PdfDocument(writer);
+        Document document = new Document(pdfDoc);
+
+        // Add content using iText layout elements
+        document.add(new Paragraph("DEPARTMENT ACADEMIC REPORT").setBold().setFontSize(16));
+        document.add(new Paragraph("Department ID: " + report.getDepartmentId()));
+        document.add(new Paragraph("Generated At: " + LocalDateTime.now()));
+        document.add(new Paragraph("\nSummary Statistics:").setBold());
+        document.add(new Paragraph("- Total Exam Packets: " + report.getTotalPackets()));
+        document.add(new Paragraph("- Pending Packets: " + report.getPendingPackets()));
+        document.add(new Paragraph("- In Progress Packets: " + report.getInProgressPackets()));
+        document.add(new Paragraph("- Completed Packets: " + report.getCompletedPackets()));
+        document.add(new Paragraph("- Overdue Packets: " + report.getOverduePackets()));
+
+        document.add(new Paragraph("\nLecturer Marking Progress:").setBold());
+
+        Table table = new Table(new float[]{3, 2, 2, 2});
+        table.addHeaderCell("Lecturer Name");
+        table.addHeaderCell("Assigned");
+        table.addHeaderCell("Marked");
+        table.addHeaderCell("Progress");
 
         for (LecturerWorkloadDto w : report.getWorkloadDistribution()) {
-            pdfText.append(String.format("- %s (%s): %d/%d Scripts Marked (%.1f%% Progress)\n",
-                    w.getLecturerName(), w.getLecturerId(), w.getMarkedScripts(), w.getTotalScripts(), w.getProgressPercentage()));
+            table.addCell(w.getLecturerName());
+            table.addCell(String.valueOf(w.getTotalAssignedPackets()));
+            table.addCell(String.valueOf(w.getMarkedScripts()));
+            table.addCell(String.format("%.1f%%", w.getProgressPercentage()));
         }
 
-        return pdfText.toString().getBytes(StandardCharsets.UTF_8);
+        document.add(table);
+        document.close();
+
+        return baos.toByteArray();
     }
 }
