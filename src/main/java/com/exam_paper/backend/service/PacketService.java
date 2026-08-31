@@ -13,6 +13,10 @@ import com.exam_paper.backend.repository.CourseRepository;
 import com.exam_paper.backend.repository.PacketStatusRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.exam_paper.backend.dto.StatusUpdateDTO;
+import com.exam_paper.backend.repository.NotificationRepository;
+import com.exam_paper.backend.entity.Notification;
+import java.time.LocalDateTime;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +29,8 @@ public class PacketService {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final PacketStatusRepository packetStatusRepository;
+    private final ActivityLogService activityLogService;
+    private final NotificationRepository notificationRepository;
 
     public List<PacketDTO> getPackets(String username, String role) {
         User user = userRepository.findByUsername(username)
@@ -187,5 +193,90 @@ public class PacketService {
 
     public void deletePacket(Long id) {
         packetRepository.deleteById(id);
+    }
+
+    public PacketDetailDTO updateStatus(Long packetId, StatusUpdateDTO dto, String username) {
+        ExamPacket packet = packetRepository.findByIdWithDetails(packetId)
+                .orElseThrow(() -> new RuntimeException("Packet not found"));
+
+        User actor = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Determine new status and messages
+        String newStatusName;
+        String stageName;
+        String logMessage;
+        String notifTitle;
+        String notifMessage;
+        String notifType;
+
+        switch (dto.getAction()) {
+            case "APPROVE" -> {
+                newStatusName = "APPROVED";
+                stageName = "APPROVED";
+                logMessage = "Packet approved by " + actor.getFullName();
+                notifTitle = "Packet Approved";
+                notifMessage = packet.getCourse().getCourseCode() + " "
+                        + packet.getCourse().getCourseName()
+                        + " has been approved and moved to the printing queue.";
+                notifType = "APPROVED";
+            }
+            case "RETURN" -> {
+                newStatusName = "PENDING";
+                stageName = "UNDER_MODERATION";
+                logMessage = "Returned for revision"
+                        + (dto.getNote() != null ? " — " + dto.getNote() : "")
+                        + " by " + actor.getFullName();
+                notifTitle = "Returned for Revision";
+                notifMessage = packet.getCourse().getCourseCode() + " "
+                        + packet.getCourse().getCourseName()
+                        + " has been returned for revision by " + actor.getFullName() + ".";
+                notifType = "MODERATION";
+            }
+            case "REJECT" -> {
+                newStatusName = "DRAFT";
+                stageName = "DRAFT";
+                logMessage = "Packet rejected"
+                        + (dto.getNote() != null ? " — " + dto.getNote() : "")
+                        + " by " + actor.getFullName();
+                notifTitle = "Packet Rejected";
+                notifMessage = packet.getCourse().getCourseCode() + " "
+                        + packet.getCourse().getCourseName()
+                        + " has been rejected by " + actor.getFullName() + ".";
+                notifType = "URGENT";
+            }
+            default -> throw new RuntimeException("Invalid action: " + dto.getAction());
+        }
+
+        // Update status
+        PacketStatus newStatus = packetStatusRepository
+                .findByStatusName(newStatusName)
+                .orElseThrow(() -> new RuntimeException("Status not found: " + newStatusName));
+        packet.setStatus(newStatus);
+        packetRepository.save(packet);
+
+        // Log to activity_log
+        String initials = actor.getFullName().split(" ")[0].substring(0, 1)
+                + (actor.getFullName().split(" ").length > 1
+                ? actor.getFullName().split(" ")[1].substring(0, 1) : "");
+        activityLogService.logForPacket(
+                packet, stageName, logMessage,
+                actor.getFullName(), initials.toUpperCase(), "bg-blue-500"
+        );
+
+        // Create notification
+        Notification notification = Notification.builder()
+                .title(notifTitle)
+                .message(notifMessage)
+                .type(notifType)
+                .courseCode(packet.getCourse().getCourseCode())
+                .isRead(false)
+                .isUrgent("REJECT".equals(dto.getAction()))
+                .createdAt(LocalDateTime.now())
+                .packet(packet)
+                .build();
+        notificationRepository.save(notification);
+
+        return getPacketDetail(packetId);
     }
     }

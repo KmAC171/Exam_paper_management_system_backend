@@ -3,6 +3,7 @@ package com.exam_paper.backend.controller;
 import com.exam_paper.backend.dto.CreatePacketDTO;
 import com.exam_paper.backend.dto.PacketDTO;
 import com.exam_paper.backend.dto.PacketDetailDTO;
+import com.exam_paper.backend.dto.StatusUpdateDTO;
 import com.exam_paper.backend.service.PacketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -67,5 +68,14 @@ public class PacketController {
                     p.getDeadline(), p.getStatus(), p.getPriority());
         }
         writer.flush();
+    }
+
+    @PutMapping("/{id}/status")
+    public PacketDetailDTO updateStatus(
+            @PathVariable Long id,
+            @RequestBody StatusUpdateDTO dto,
+            Authentication authentication) {
+        String username = authentication.getName();
+        return packetService.updateStatus(id, dto, username);
     }
 }
