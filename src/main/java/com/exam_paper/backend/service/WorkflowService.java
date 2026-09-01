@@ -48,15 +48,18 @@ public class WorkflowService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String userRole = user.getRole() != null ? user.getRole().name() : (role != null ? role : "ROLE_ADMIN");
+
         List<ExamPacket> packets;
-        switch (role) {
+        switch (userRole) {
             case "ROLE_ADMIN", "ROLE_GUEST" ->
                     packets = packetRepository.findAllWithDetails();
             case "ROLE_USER" ->
                     packets = packetRepository.findByLecturerId(user.getUserId());
             case "ROLE_MODERATOR" ->
                     packets = packetRepository.findByModeratorId(user.getUserId());
-            default -> packets = List.of();
+            default ->
+                    packets = List.of();
         }
 
         return packets.stream()
@@ -65,8 +68,15 @@ public class WorkflowService {
     }
 
     private WorkflowPacketDTO toWorkflowDTO(ExamPacket p) {
-        String currentStatus = p.getStatus().getStatusName();
+        String currentStatus = p.getStatus() != null ? p.getStatus().getStatusName() : "DRAFT";
         int currentStageIndex = STAGE_ORDER.indexOf(currentStatus);
+        if (currentStageIndex == -1) {
+            if ("DELAYED".equalsIgnoreCase(currentStatus)) {
+                currentStageIndex = 2; // Treat delayed as moderation stage
+            } else {
+                currentStageIndex = 0;
+            }
+        }
         int currentStage = currentStageIndex + 1;
 
         String packetIdStr = String.format("PKT-%d-%03d",
@@ -102,8 +112,8 @@ public class WorkflowService {
                     .collect(Collectors.toList());
 
             stages.add(new WorkflowStageDTO(
-                    STAGE_LABELS.get(stageKey),
-                    STAGE_ACTORS.get(stageKey),
+                    STAGE_LABELS.getOrDefault(stageKey, stageKey),
+                    STAGE_ACTORS.getOrDefault(stageKey, "System"),
                     completed,
                     current,
                     events
@@ -112,12 +122,12 @@ public class WorkflowService {
 
         return new WorkflowPacketDTO(
                 packetIdStr,
-                p.getCourse().getCourseCode(),
-                p.getCourse().getCourseName(),
+                p.getCourse() != null ? p.getCourse().getCourseCode() : "N/A",
+                p.getCourse() != null ? p.getCourse().getCourseName() : "N/A",
                 currentStatus,
                 currentStage,
                 6,
                 stages
         );
     }
-}
+}
