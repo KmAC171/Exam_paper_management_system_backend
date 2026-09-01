@@ -1,10 +1,15 @@
 package com.exam_paper.backend.service;
 
 import com.exam_paper.backend.dto.*;
+import com.exam_paper.backend.entity.Department;
 import com.exam_paper.backend.entity.User;
+import com.exam_paper.backend.repository.DepartmentRepository;
 import com.exam_paper.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.exam_paper.backend.entity.Department;
+
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,6 +23,8 @@ import java.util.stream.Collectors;
 public class UserManagementService {
 
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private static final Map<String, String> ROLE_LABELS = Map.of(
             "ROLE_ADMIN", "Asst. Registrar",
@@ -104,5 +111,67 @@ public class UserManagementService {
         long days = ChronoUnit.DAYS.between(dt, LocalDateTime.now());
         if (days == 1) return "Yesterday";
         return dt.format(DateTimeFormatter.ofPattern("MMM d"));
+    }
+
+    public UserManagementDTO createUser(UserDTO dto) {
+        // check username not taken
+        if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already exists");
+        }
+
+        User.Role userRole;
+        try {
+            userRole = User.Role.valueOf(dto.getRole());
+        } catch (Exception e) {
+            userRole = User.Role.ROLE_USER;
+        }
+
+        Department department = dto.getDepartmentId() != null
+                ? departmentRepository.findById(dto.getDepartmentId()).orElse(null)
+                : null;
+
+        User user = User.builder()
+                .fullName(dto.getFullName())
+                .username(dto.getUsername())
+                .email(dto.getEmail())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .role(userRole)
+                .department(department)
+                .isActive(true)
+                .lastLogin(null)
+                .build();
+
+        return toDTO(userRepository.save(user));
+    }
+
+    public UserManagementDTO updateUser(Long userId, UpdateUserDTO dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setFullName(dto.getFullName());
+        user.setEmail(dto.getEmail());
+        user.setActive(dto.isActive());
+
+        User.Role userRole;
+        try {
+            userRole = User.Role.valueOf(dto.getRole());
+        } catch (Exception e) {
+            userRole = User.Role.ROLE_USER;
+        }
+        user.setRole(userRole);
+
+        if (dto.getDepartmentId() != null) {
+            departmentRepository.findById(dto.getDepartmentId())
+                    .ifPresent(user::setDepartment);
+        } else {
+            user.setDepartment(null);
+        }
+
+        // only update password if provided
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        return toDTO(userRepository.save(user));
     }
 }
