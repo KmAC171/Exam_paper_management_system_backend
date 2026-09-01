@@ -44,20 +44,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/dashboard/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
-                        .requestMatchers("/api/packets/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
-                        .requestMatchers(HttpMethod.POST, "/api/packets/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/packets/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/packets/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/packets/*/comments").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.DELETE, "/api/packets/comments/*").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.POST, "/api/packets/*/attachments").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.DELETE, "/api/packets/attachments/*").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.PUT, "/api/packets/*/status").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.GET, "/api/packets/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
+                        .requestMatchers(HttpMethod.POST, "/api/packets").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/packets/*").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/packets/*").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/form-data/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/api/workflow/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
                         .requestMatchers("/api/reports/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST")
                         .requestMatchers("/api/notifications/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
                         .requestMatchers("/api/users", "/api/users/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/packets/*/status").hasAnyAuthority(
-                                "ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_GUEST"
-                        )
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -71,8 +74,9 @@ public class SecurityConfig {
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
-        config.setAllowCredentials(true);                    // ← add this
-        config.addExposedHeader("Authorization");            // ← add this
+        config.setAllowCredentials(true);
+        config.addExposedHeader("Authorization");
+        config.addExposedHeader("Content-Disposition");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
