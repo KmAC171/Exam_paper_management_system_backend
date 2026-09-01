@@ -23,17 +23,20 @@ public class NotificationService {
 
     public List<NotificationDTO> getNotifications(String username, String role) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        String userRole = user.getRole() != null ? user.getRole().name() : (role != null ? role : "ROLE_ADMIN");
 
         List<Notification> notifications;
-        switch (role) {
+        switch (userRole) {
             case "ROLE_ADMIN", "ROLE_GUEST" ->
                     notifications = notificationRepository.findAllByOrderByCreatedAtDesc();
             case "ROLE_USER" ->
                     notifications = notificationRepository.findByUserOrPacketLecturer(user.getUserId());
             case "ROLE_MODERATOR" ->
                     notifications = notificationRepository.findByUserOrPacketModerator(user.getUserId());
-            default -> notifications = List.of();
+            default ->
+                    notifications = notificationRepository.findByUserOrPacketModerator(user.getUserId());
         }
 
         return notifications.stream()
@@ -41,8 +44,17 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    public void markAllAsRead() {
-        notificationRepository.markAllAsRead();
+    public void markAllAsRead(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        String userRole = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
+        switch (userRole) {
+            case "ROLE_ADMIN", "ROLE_GUEST" -> notificationRepository.markAllAsRead();
+            case "ROLE_USER" -> notificationRepository.markAllAsReadForLecturer(user.getUserId());
+            case "ROLE_MODERATOR" -> notificationRepository.markAllAsReadForModerator(user.getUserId());
+            default -> notificationRepository.markAllAsReadForModerator(user.getUserId());
+        }
     }
 
     public void markAsRead(Long id) {
@@ -56,9 +68,19 @@ public class NotificationService {
         notificationRepository.deleteById(id);
     }
 
-    public long getUnreadCount() {
-        return notificationRepository.countByIsReadFalse();
+    public long getUnreadCount(String username) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) return 0;
+
+        String userRole = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
+        return switch (userRole) {
+            case "ROLE_ADMIN", "ROLE_GUEST" -> notificationRepository.countByIsReadFalse();
+            case "ROLE_USER" -> notificationRepository.countUnreadByLecturerId(user.getUserId());
+            case "ROLE_MODERATOR" -> notificationRepository.countUnreadByModeratorId(user.getUserId());
+            default -> notificationRepository.countUnreadByModeratorId(user.getUserId());
+        };
     }
+
 
     private NotificationDTO toDTO(Notification n) {
         return new NotificationDTO(

@@ -24,8 +24,24 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByIsReadFalse();
 
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.moderator.userId = :userId)")
+    long countUnreadByModeratorId(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.lecturer.userId = :userId)")
+    long countUnreadByLecturerId(@Param("userId") Long userId);
+
     @Modifying
     @Transactional
     @Query("UPDATE Notification n SET n.isRead = true")
     void markAllAsRead();
-}
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.moderator.userId = :userId")
+    void markAllAsReadForModerator(@Param("userId") Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.lecturer.userId = :userId")
+    void markAllAsReadForLecturer(@Param("userId") Long userId);
+}
