@@ -106,8 +106,8 @@ public class ReportService {
 
     // ── EXPORT EXCEL ──────────────────────────────────────────
 
-    public void exportExcel(HttpServletResponse response) throws IOException {
-        ReportResponseDTO report = getReport("ALL");
+    public void exportExcel(HttpServletResponse response, String semester) throws IOException {
+        ReportResponseDTO report = getReport(semester != null ? semester : "ALL");
 
         response.setContentType(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -189,9 +189,9 @@ public class ReportService {
 
     // ── EXPORT PDF ────────────────────────────────────────────
 
-    public void exportPdf(HttpServletResponse response)
+    public void exportPdf(HttpServletResponse response, String semester)
             throws IOException, DocumentException {
-        ReportResponseDTO report = getReport("ALL");
+        ReportResponseDTO report = getReport(semester != null ? semester : "ALL");
 
         response.setContentType("application/pdf");
         response.setHeader("Content-Disposition",

@@ -20,15 +20,17 @@ public class ReportController {
 
     @GetMapping("/export/excel")
     public void exportExcel(
+            @RequestParam(defaultValue = "ALL") String semester,
             jakarta.servlet.http.HttpServletResponse response)
             throws Exception {
-        reportService.exportExcel(response);
+        reportService.exportExcel(response, semester);
     }
 
     @GetMapping("/export/pdf")
     public void exportPdf(
+            @RequestParam(defaultValue = "ALL") String semester,
             jakarta.servlet.http.HttpServletResponse response)
             throws Exception {
-        reportService.exportPdf(response);
+        reportService.exportPdf(response, semester);
     }
 }
