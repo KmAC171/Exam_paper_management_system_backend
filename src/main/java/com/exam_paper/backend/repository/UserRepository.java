@@ -12,6 +12,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.department ORDER BY u.fullName")
     List<User> findAllWithDepartment();
+    List<User> findByRole(User.Role role);
 
     long countByRole(User.Role role);
     long countByIsActiveTrue();

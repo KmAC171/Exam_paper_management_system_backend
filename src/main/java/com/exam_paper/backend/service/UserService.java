@@ -41,7 +41,7 @@ public class UserService {
 
         User user = User.builder()
                 .username(dto.getUsername())
-                .fullName(dto.getFullname())
+                .fullName(dto.getFullName())
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .role(userRole)
                 .build();

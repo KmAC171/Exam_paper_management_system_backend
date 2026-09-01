@@ -24,8 +24,9 @@ public class NotificationController {
     }
 
     @PutMapping("/mark-all-read")
-    public void markAllAsRead() {
-        notificationService.markAllAsRead();
+    public void markAllAsRead(Authentication authentication) {
+        String username = authentication.getName();
+        notificationService.markAllAsRead(username);
     }
 
     @PutMapping("/{id}/read")
@@ -39,7 +40,8 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
-    public Map<String, Long> getUnreadCount() {
-        return Map.of("count", notificationService.getUnreadCount());
+    public Map<String, Long> getUnreadCount(Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return Map.of("count", notificationService.getUnreadCount(username));
     }
-}
+}

@@ -72,4 +72,58 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     """, nativeQuery = true)
     List<DepartmentReportProjection> getDepartmentReport();
 
+    // Monthly trend with date filter
+    @Query(value = """
+    SELECT
+        MONTH(p.deadline) AS month,
+        COUNT(*) AS submitted,
+        SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END) AS approved,
+        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+    FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE YEAR(p.deadline) = YEAR(CURDATE())
+    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+    GROUP BY MONTH(p.deadline)
+    ORDER BY MONTH(p.deadline)
+    """, nativeQuery = true)
+    List<MonthlyTrendProjection> getMonthlyTrendFiltered(
+            @Param("startMonth") int startMonth,
+            @Param("endMonth") int endMonth);
+
+    // Count with date filter
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    WHERE YEAR(p.deadline) = YEAR(CURDATE())
+    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+    """, nativeQuery = true)
+    long countFiltered(
+            @Param("startMonth") int startMonth,
+            @Param("endMonth") int endMonth);
+
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE (ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED')
+    AND YEAR(p.deadline) = YEAR(CURDATE())
+    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+    """, nativeQuery = true)
+    long countCompletedFiltered(
+            @Param("startMonth") int startMonth,
+            @Param("endMonth") int endMonth);
+
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE ps.status_name = 'PENDING' AND p.deadline < CURDATE()
+    AND YEAR(p.deadline) = YEAR(CURDATE())
+    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+    """, nativeQuery = true)
+    long countDelayedFiltered(
+            @Param("startMonth") int startMonth,
+            @Param("endMonth") int endMonth);
+
 }

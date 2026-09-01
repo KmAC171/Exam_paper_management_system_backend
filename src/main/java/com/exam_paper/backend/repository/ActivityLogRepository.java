@@ -8,4 +8,6 @@ import java.util.List;
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
     List<ActivityLog> findTop10ByOrderByCreatedAtDesc();
     List<ActivityLog> findByPacket_PacketIdOrderByCreatedAtAsc(Long packetId);
+    List<ActivityLog> findByPacket_Moderator_UserIdOrderByCreatedAtDesc(Long moderatorId);
 }
+
