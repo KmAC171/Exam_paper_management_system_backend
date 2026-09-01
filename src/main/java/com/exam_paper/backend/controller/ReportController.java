@@ -13,7 +13,22 @@ public class ReportController {
     private final ReportService reportService;
 
     @GetMapping
-    public ReportResponseDTO getReport() {
-        return reportService.getReport();
+    public ReportResponseDTO getReport(
+            @RequestParam(defaultValue = "ALL") String semester) {
+        return reportService.getReport(semester);
+    }
+
+    @GetMapping("/export/excel")
+    public void exportExcel(
+            jakarta.servlet.http.HttpServletResponse response)
+            throws Exception {
+        reportService.exportExcel(response);
+    }
+
+    @GetMapping("/export/pdf")
+    public void exportPdf(
+            jakarta.servlet.http.HttpServletResponse response)
+            throws Exception {
+        reportService.exportPdf(response);
     }
 }
