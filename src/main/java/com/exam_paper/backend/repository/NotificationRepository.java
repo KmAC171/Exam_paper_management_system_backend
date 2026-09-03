@@ -15,19 +15,19 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findAllByOrderByCreatedAtDesc();
 
     // Lecturer — notifications for their packets
-    @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId OR n.packet.lecturer.userId = :userId ORDER BY n.createdAt DESC")
+    @Query("SELECT n FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.lecturer l LEFT JOIN n.user u WHERE (u.userId = :userId OR l.userId = :userId) ORDER BY n.createdAt DESC")
     List<Notification> findByUserOrPacketLecturer(@Param("userId") Long userId);
 
     // Moderator — notifications for their assigned packets
-    @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId OR n.packet.moderator.userId = :userId ORDER BY n.createdAt DESC")
+    @Query("SELECT n FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.moderator m LEFT JOIN n.user u WHERE (u.userId = :userId OR m.userId = :userId) ORDER BY n.createdAt DESC")
     List<Notification> findByUserOrPacketModerator(@Param("userId") Long userId);
 
     long countByIsReadFalse();
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.moderator.userId = :userId)")
+    @Query("SELECT COUNT(n) FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.moderator m LEFT JOIN n.user u WHERE n.isRead = false AND (u.userId = :userId OR m.userId = :userId)")
     long countUnreadByModeratorId(@Param("userId") Long userId);
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.lecturer.userId = :userId)")
+    @Query("SELECT COUNT(n) FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.lecturer l LEFT JOIN n.user u WHERE n.isRead = false AND (u.userId = :userId OR l.userId = :userId)")
     long countUnreadByLecturerId(@Param("userId") Long userId);
 
     @Modifying
@@ -37,11 +37,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.moderator.userId = :userId")
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.id IN (SELECT n2.id FROM Notification n2 LEFT JOIN n2.packet p LEFT JOIN p.moderator m LEFT JOIN n2.user u WHERE u.userId = :userId OR m.userId = :userId)")
     void markAllAsReadForModerator(@Param("userId") Long userId);
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.lecturer.userId = :userId")
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.id IN (SELECT n2.id FROM Notification n2 LEFT JOIN n2.packet p LEFT JOIN p.lecturer l LEFT JOIN n2.user u WHERE u.userId = :userId OR l.userId = :userId)")
     void markAllAsReadForLecturer(@Param("userId") Long userId);
 }
