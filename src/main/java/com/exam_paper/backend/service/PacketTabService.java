@@ -23,6 +23,8 @@ public class PacketTabService {
     private final ActivityLogRepository activityLogRepository;
     private final PacketRepository packetRepository;
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
+    private final ActivityLogService activityLogService;
 
     private static final String UPLOAD_DIR = "uploads/";
     private static final List<String> AVATAR_COLORS = List.of(
@@ -56,7 +58,85 @@ public class PacketTabService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        return toCommentDTO(commentRepository.save(comment));
+        PacketComment savedComment = commentRepository.save(comment);
+
+        String courseCode = packet.getCourse() != null ? packet.getCourse().getCourseCode() : "Exam Packet";
+        String preview = text != null && text.length() > 60 ? text.substring(0, 60) + "..." : (text != null ? text : "");
+
+        // 1. Notify relevant user(s)
+        if (packet.getLecturer() != null && user.getUserId().equals(packet.getLecturer().getUserId())) {
+            // Commenter is Lecturer -> notify Moderator
+            if (packet.getModerator() != null) {
+                Notification notif = Notification.builder()
+                        .user(packet.getModerator())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New Comment on " + courseCode)
+                        .message(user.getFullName() + " (Lecturer) commented: \"" + preview + "\"")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notif);
+            }
+        } else if (packet.getModerator() != null && user.getUserId().equals(packet.getModerator().getUserId())) {
+            // Commenter is Moderator -> notify Lecturer
+            if (packet.getLecturer() != null) {
+                Notification notif = Notification.builder()
+                        .user(packet.getLecturer())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New Comment on " + courseCode)
+                        .message(user.getFullName() + " (Moderator) commented: \"" + preview + "\"")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notif);
+            }
+        } else {
+            // Commenter is Registry / AR / HOD -> notify both
+            if (packet.getLecturer() != null) {
+                Notification notifLec = Notification.builder()
+                        .user(packet.getLecturer())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New Comment on " + courseCode)
+                        .message(user.getFullName() + ": \"" + preview + "\"")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notifLec);
+            }
+            if (packet.getModerator() != null) {
+                Notification notifMod = Notification.builder()
+                        .user(packet.getModerator())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New Comment on " + courseCode)
+                        .message(user.getFullName() + ": \"" + preview + "\"")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notifMod);
+            }
+        }
+
+        // 2. Log activity
+        String currentStage = packet.getStatus() != null ? packet.getStatus().getStatusName() : "DRAFT";
+        activityLogService.logForPacket(
+                packet, currentStage,
+                "Comment posted by " + user.getFullName(),
+                user.getFullName(), getInitials(user.getFullName()), "bg-purple-500"
+        );
+
+        return toCommentDTO(savedComment);
     }
 
     public void deleteComment(Long commentId) {
@@ -99,7 +179,84 @@ public class PacketTabService {
                 .uploadedAt(LocalDateTime.now())
                 .build();
 
-        return toAttachmentDTO(attachmentRepository.save(attachment));
+        PacketAttachment savedAttachment = attachmentRepository.save(attachment);
+
+        String courseCode = packet.getCourse() != null ? packet.getCourse().getCourseCode() : "Exam Packet";
+
+        // 1. Notify relevant user(s)
+        if (packet.getLecturer() != null && user.getUserId().equals(packet.getLecturer().getUserId())) {
+            // Uploader is Lecturer -> notify Moderator
+            if (packet.getModerator() != null) {
+                Notification notif = Notification.builder()
+                        .user(packet.getModerator())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New File Uploaded")
+                        .message(user.getFullName() + " uploaded " + file.getOriginalFilename() + " for " + courseCode + ".")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notif);
+            }
+        } else if (packet.getModerator() != null && user.getUserId().equals(packet.getModerator().getUserId())) {
+            // Uploader is Moderator -> notify Lecturer
+            if (packet.getLecturer() != null) {
+                Notification notif = Notification.builder()
+                        .user(packet.getLecturer())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New File Uploaded")
+                        .message(user.getFullName() + " uploaded " + file.getOriginalFilename() + " for " + courseCode + ".")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notif);
+            }
+        } else {
+            // Registry / AR / HOD uploaded
+            if (packet.getLecturer() != null) {
+                Notification notifLec = Notification.builder()
+                        .user(packet.getLecturer())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New File Uploaded by Registry")
+                        .message(user.getFullName() + " uploaded " + file.getOriginalFilename() + " for " + courseCode + ".")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notifLec);
+            }
+            if (packet.getModerator() != null) {
+                Notification notifMod = Notification.builder()
+                        .user(packet.getModerator())
+                        .packet(packet)
+                        .courseCode(courseCode)
+                        .title("New File Uploaded by Registry")
+                        .message(user.getFullName() + " uploaded " + file.getOriginalFilename() + " for " + courseCode + ".")
+                        .type("MODERATION")
+                        .isUrgent(false)
+                        .isRead(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                notificationRepository.save(notifMod);
+            }
+        }
+
+        // 2. Log activity
+        String currentStage = packet.getStatus() != null ? packet.getStatus().getStatusName() : "DRAFT";
+        activityLogService.logForPacket(
+                packet, currentStage,
+                "Attachment uploaded: " + file.getOriginalFilename() + " by " + user.getFullName(),
+                user.getFullName(), getInitials(user.getFullName()), "bg-indigo-500"
+        );
+
+        return toAttachmentDTO(savedAttachment);
     }
 
     public void deleteAttachment(Long attachmentId) {

@@ -47,4 +47,12 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
             "JOIN FETCH p.status " +
             "WHERE p.packetId = :id")
     Optional<ExamPacket> findByIdWithDetails(@Param("id") Long id);
+
+    long countByCourse_CourseId(Long courseId);
+
+    boolean existsByCourse_CourseId(Long courseId);
+
+    long countByCourse_Department_DepartmentId(Long departmentId);
+
+    boolean existsByCourse_Department_DepartmentId(Long departmentId);
 }

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PacketDTO {
+    private Long id;
     private String packetId;
     private String courseCode;
     private String courseName;

@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface PacketCommentRepository extends JpaRepository<PacketComment, Long> {
     List<PacketComment> findByPacket_PacketIdOrderByCreatedAtAsc(Long packetId);
+    void deleteByPacket_PacketId(Long packetId);
 }

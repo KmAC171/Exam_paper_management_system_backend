@@ -34,13 +34,18 @@ public class PacketController {
     }
 
     @PostMapping
-    public PacketDTO createPacket(@RequestBody CreatePacketDTO dto) {
-        return packetService.createPacket(dto);
+    public PacketDTO createPacket(@RequestBody CreatePacketDTO dto, Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return packetService.createPacket(dto, username);
     }
 
     @PutMapping("/{id}")
-    public PacketDTO updatePacket(@PathVariable Long id, @RequestBody CreatePacketDTO dto) {
-        return packetService.updatePacket(id, dto);
+    public PacketDTO updatePacket(
+            @PathVariable Long id,
+            @RequestBody CreatePacketDTO dto,
+            Authentication authentication) {
+        String username = authentication != null ? authentication.getName() : null;
+        return packetService.updatePacket(id, dto, username);
     }
 
     @DeleteMapping("/{id}")
