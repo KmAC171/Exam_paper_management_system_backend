@@ -48,7 +48,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/packets/comments/*").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
                         .requestMatchers(HttpMethod.POST, "/api/packets/*/attachments").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
                         .requestMatchers(HttpMethod.DELETE, "/api/packets/attachments/*").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
-                        .requestMatchers(HttpMethod.PUT, "/api/packets/*/status").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.PUT, "/api/packets/*/status").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_GUEST", "ROLE_USER")
                         .requestMatchers(HttpMethod.GET, "/api/packets/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
                         .requestMatchers(HttpMethod.POST, "/api/packets").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/packets/*").hasAuthority("ROLE_ADMIN")
@@ -58,6 +58,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/reports/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST")
                         .requestMatchers("/api/notifications/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
                         .requestMatchers("/api/users", "/api/users/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/courses", "/api/courses/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST")
+                        .requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST")
+                        .requestMatchers("/api/departments", "/api/departments/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
 
