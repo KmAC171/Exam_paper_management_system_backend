@@ -15,5 +15,6 @@ public class PacketStatus {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long statusId;
 
+    @Column(unique = true, nullable = false)
     private String statusName;
 }

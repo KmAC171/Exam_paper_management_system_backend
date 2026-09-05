@@ -17,7 +17,7 @@ public class ExamPacket {
     private Long packetId;
 
     @ManyToOne
-    @JoinColumn(name = "course_id")
+    @JoinColumn(name = "course_id", unique = true)
     private Course course;
 
     @ManyToOne

@@ -279,13 +279,13 @@ public class PacketTabService {
     // ─── MAPPERS ────────────────────────────────────────────
 
     private CommentDTO toCommentDTO(PacketComment c) {
-        String name = c.getUser().getFullName();
+        String name = c.getUser() != null ? c.getUser().getFullName() : "Former User";
         String initials = getInitials(name);
         int ci = Math.abs(name.hashCode() % AVATAR_COLORS.size());
         return new CommentDTO(
                 c.getId(), c.getComment(), name, initials,
                 AVATAR_COLORS.get(ci),
-                c.getCreatedAt().format(FMT)
+                c.getCreatedAt() != null ? c.getCreatedAt().format(FMT) : ""
         );
     }
 
@@ -293,8 +293,8 @@ public class PacketTabService {
         return new AttachmentDTO(
                 a.getId(), a.getFileName(), a.getFileType(),
                 formatSize(a.getFileSize()),
-                a.getUploadedBy().getFullName(),
-                a.getUploadedAt().format(FMT),
+                a.getUploadedBy() != null ? a.getUploadedBy().getFullName() : "Former User",
+                a.getUploadedAt() != null ? a.getUploadedAt().format(FMT) : "",
                 "/api/packets/attachments/" + a.getId() + "/download"
         );
     }

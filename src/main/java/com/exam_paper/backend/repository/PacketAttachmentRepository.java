@@ -7,4 +7,5 @@ import java.util.List;
 public interface PacketAttachmentRepository extends JpaRepository<PacketAttachment, Long> {
     List<PacketAttachment> findByPacket_PacketIdOrderByUploadedAtDesc(Long packetId);
     void deleteByPacket_PacketId(Long packetId);
+    List<PacketAttachment> findByUploadedBy_UserId(Long userId);
 }

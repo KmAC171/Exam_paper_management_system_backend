@@ -1,15 +1,12 @@
 package com.exam_paper.backend.service;
 
 import com.exam_paper.backend.dto.*;
-import com.exam_paper.backend.entity.Department;
-import com.exam_paper.backend.entity.User;
-import com.exam_paper.backend.repository.DepartmentRepository;
-import com.exam_paper.backend.repository.UserRepository;
+import com.exam_paper.backend.entity.*;
+import com.exam_paper.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.exam_paper.backend.entity.Department;
-
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +21,11 @@ public class UserManagementService {
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final NotificationRepository notificationRepository;
+    private final CourseRepository courseRepository;
+    private final PacketRepository packetRepository;
+    private final PacketCommentRepository packetCommentRepository;
+    private final PacketAttachmentRepository packetAttachmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final Map<String, String> ROLE_LABELS = Map.of(
@@ -56,7 +58,64 @@ public class UserManagementService {
         return new UserManagementResponseDTO(stats, userDTOs);
     }
 
+    @Transactional
     public void deleteUser(Long userId) {
+        // 1. Delete notifications sent directly to this user
+        notificationRepository.deleteByUser_UserId(userId);
+
+        // 2. Disassociate courses where user is assigned as lecturer or moderator
+        List<Course> lecCourses = courseRepository.findByLecturer_UserId(userId);
+        if (!lecCourses.isEmpty()) {
+            for (Course c : lecCourses) {
+                c.setLecturer(null);
+            }
+            courseRepository.saveAll(lecCourses);
+        }
+
+        List<Course> modCourses = courseRepository.findByModerator_UserId(userId);
+        if (!modCourses.isEmpty()) {
+            for (Course c : modCourses) {
+                c.setModerator(null);
+            }
+            courseRepository.saveAll(modCourses);
+        }
+
+        // 3. Disassociate packets where user is assigned as lecturer or moderator
+        List<ExamPacket> lecPackets = packetRepository.findByLecturer_UserId(userId);
+        if (!lecPackets.isEmpty()) {
+            for (ExamPacket p : lecPackets) {
+                p.setLecturer(null);
+            }
+            packetRepository.saveAll(lecPackets);
+        }
+
+        List<ExamPacket> modPackets = packetRepository.findByModerator_UserId(userId);
+        if (!modPackets.isEmpty()) {
+            for (ExamPacket p : modPackets) {
+                p.setModerator(null);
+            }
+            packetRepository.saveAll(modPackets);
+        }
+
+        // 4. Disassociate comments authored by this user
+        List<PacketComment> comments = packetCommentRepository.findByUser_UserId(userId);
+        if (!comments.isEmpty()) {
+            for (PacketComment c : comments) {
+                c.setUser(null);
+            }
+            packetCommentRepository.saveAll(comments);
+        }
+
+        // 5. Disassociate attachments uploaded by this user
+        List<PacketAttachment> attachments = packetAttachmentRepository.findByUploadedBy_UserId(userId);
+        if (!attachments.isEmpty()) {
+            for (PacketAttachment a : attachments) {
+                a.setUploadedBy(null);
+            }
+            packetAttachmentRepository.saveAll(attachments);
+        }
+
+        // 6. Delete the user
         userRepository.deleteById(userId);
     }
 
@@ -114,9 +173,19 @@ public class UserManagementService {
     }
 
     public UserManagementDTO createUser(UserDTO dto) {
-        // check username not taken
-        if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+        if (dto.getUsername() == null || dto.getUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Username is required.");
+        }
+        String username = dto.getUsername().trim();
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new IllegalArgumentException("Username '" + username + "' already exists. Please choose a different username.");
+        }
+
+        String email = dto.getEmail() != null ? dto.getEmail().trim() : null;
+        if (email != null && !email.isEmpty()) {
+            if (userRepository.existsByEmailIgnoreCase(email)) {
+                throw new IllegalArgumentException("Email address '" + email + "' is already registered to another user.");
+            }
         }
 
         User.Role userRole;
@@ -131,9 +200,9 @@ public class UserManagementService {
                 : null;
 
         User user = User.builder()
-                .fullName(dto.getFullName())
-                .username(dto.getUsername())
-                .email(dto.getEmail())
+                .fullName(dto.getFullName() != null ? dto.getFullName().trim() : "")
+                .username(username)
+                .email(email != null && !email.isEmpty() ? email : null)
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .role(userRole)
                 .department(department)
@@ -148,8 +217,17 @@ public class UserManagementService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setFullName(dto.getFullName());
-        user.setEmail(dto.getEmail());
+        String email = dto.getEmail() != null ? dto.getEmail().trim() : null;
+        if (email != null && !email.isEmpty()) {
+            if (userRepository.existsByEmailIgnoreCaseAndUserIdNot(email, userId)) {
+                throw new IllegalArgumentException("Email address '" + email + "' is already in use by another user.");
+            }
+            user.setEmail(email);
+        } else {
+            user.setEmail(null);
+        }
+
+        user.setFullName(dto.getFullName() != null ? dto.getFullName().trim() : "");
         user.setActive(dto.isActive());
 
         User.Role userRole;

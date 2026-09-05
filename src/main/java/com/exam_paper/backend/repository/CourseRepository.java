@@ -25,7 +25,15 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
     boolean existsByCourseCodeIgnoreCaseAndCourseIdNot(String courseCode, Long courseId);
 
+    boolean existsByCourseNameIgnoreCaseAndDepartment_DepartmentId(String courseName, Long departmentId);
+
+    boolean existsByCourseNameIgnoreCaseAndDepartment_DepartmentIdAndCourseIdNot(String courseName, Long departmentId, Long courseId);
+
     long countByDepartment_DepartmentId(Long departmentId);
 
     boolean existsByDepartment_DepartmentId(Long departmentId);
+
+    List<Course> findByLecturer_UserId(Long userId);
+
+    List<Course> findByModerator_UserId(Long userId);
 }

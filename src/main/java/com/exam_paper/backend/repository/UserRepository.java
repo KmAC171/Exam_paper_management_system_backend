@@ -18,6 +18,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByDepartment_DepartmentId(Long departmentId);
 
+    boolean existsByUsernameIgnoreCase(String username);
+    boolean existsByUsernameIgnoreCaseAndUserIdNot(String username, Long userId);
+    boolean existsByEmailIgnoreCase(String email);
+    boolean existsByEmailIgnoreCaseAndUserIdNot(String email, Long userId);
+
     long countByRole(User.Role role);
     long countByIsActiveTrue();
     long countByDepartment_DepartmentId(Long departmentId);

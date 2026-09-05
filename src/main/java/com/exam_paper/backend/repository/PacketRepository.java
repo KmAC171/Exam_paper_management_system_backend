@@ -12,39 +12,39 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
 
     //AR & HOD
     @Query("SELECT p FROM ExamPacket p " +
-            "JOIN FETCH p.course c " +
-            "JOIN FETCH c.department " +
-            "JOIN FETCH p.lecturer " +
-            "JOIN FETCH p.moderator " +
-            "JOIN FETCH p.status")
+            "LEFT JOIN FETCH p.course c " +
+            "LEFT JOIN FETCH c.department " +
+            "LEFT JOIN FETCH p.lecturer " +
+            "LEFT JOIN FETCH p.moderator " +
+            "LEFT JOIN FETCH p.status")
     List<ExamPacket> findAllWithDetails();
 
     //lecturer
     @Query("SELECT p FROM ExamPacket p " +
-            "JOIN FETCH p.course c " +
-            "JOIN FETCH c.department " +
-            "JOIN FETCH p.lecturer l " +
-            "JOIN FETCH p.moderator " +
-            "JOIN FETCH p.status " +
+            "LEFT JOIN FETCH p.course c " +
+            "LEFT JOIN FETCH c.department " +
+            "LEFT JOIN FETCH p.lecturer l " +
+            "LEFT JOIN FETCH p.moderator " +
+            "LEFT JOIN FETCH p.status " +
             "WHERE l.userId = :userId")
     List<ExamPacket> findByLecturerId(@Param("userId") Long userId);
 
     //moderator
     @Query("SELECT p FROM ExamPacket p " +
-            "JOIN FETCH p.course c " +
-            "JOIN FETCH c.department " +
-            "JOIN FETCH p.lecturer " +
-            "JOIN FETCH p.moderator m " +
-            "JOIN FETCH p.status " +
+            "LEFT JOIN FETCH p.course c " +
+            "LEFT JOIN FETCH c.department " +
+            "LEFT JOIN FETCH p.lecturer " +
+            "LEFT JOIN FETCH p.moderator m " +
+            "LEFT JOIN FETCH p.status " +
             "WHERE m.userId = :userId")
     List<ExamPacket> findByModeratorId(@Param("userId") Long userId);
 
     @Query("SELECT p FROM ExamPacket p " +
-            "JOIN FETCH p.course c " +
-            "JOIN FETCH c.department " +
-            "JOIN FETCH p.lecturer " +
-            "JOIN FETCH p.moderator " +
-            "JOIN FETCH p.status " +
+            "LEFT JOIN FETCH p.course c " +
+            "LEFT JOIN FETCH c.department " +
+            "LEFT JOIN FETCH p.lecturer " +
+            "LEFT JOIN FETCH p.moderator " +
+            "LEFT JOIN FETCH p.status " +
             "WHERE p.packetId = :id")
     Optional<ExamPacket> findByIdWithDetails(@Param("id") Long id);
 
@@ -52,7 +52,15 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
 
     boolean existsByCourse_CourseId(Long courseId);
 
+    boolean existsByCourse_CourseIdAndPacketIdNot(Long courseId, Long packetId);
+
     long countByCourse_Department_DepartmentId(Long departmentId);
 
     boolean existsByCourse_Department_DepartmentId(Long departmentId);
+
+    List<ExamPacket> findByCourse_CourseId(Long courseId);
+
+    List<ExamPacket> findByLecturer_UserId(Long userId);
+
+    List<ExamPacket> findByModerator_UserId(Long userId);
 }

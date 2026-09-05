@@ -15,7 +15,10 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long courseId;
 
+    @Column(unique = true, nullable = false)
     private String courseCode;
+
+    @Column(nullable = false)
     private String courseName;
 
     @ManyToOne

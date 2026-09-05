@@ -32,6 +32,19 @@ public class UserService {
     }
 
     public void register(UserDTO dto) {
+        if (dto.getUsername() == null || dto.getUsername().trim().isEmpty()) {
+            throw new IllegalArgumentException("Username is required.");
+        }
+        String username = dto.getUsername().trim();
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
+            throw new IllegalArgumentException("Username '" + username + "' is already taken. Please choose another.");
+        }
+
+        String email = dto.getEmail() != null ? dto.getEmail().trim() : null;
+        if (email != null && !email.isEmpty() && userRepository.existsByEmailIgnoreCase(email)) {
+            throw new IllegalArgumentException("Email address '" + email + "' is already registered.");
+        }
+
         User.Role userRole;
         try {
             userRole = User.Role.valueOf(dto.getRole());
@@ -40,8 +53,9 @@ public class UserService {
         }
 
         User user = User.builder()
-                .username(dto.getUsername())
-                .fullName(dto.getFullName())
+                .username(username)
+                .fullName(dto.getFullName() != null ? dto.getFullName().trim() : "")
+                .email(email != null && !email.isEmpty() ? email : null)
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .role(userRole)
                 .build();

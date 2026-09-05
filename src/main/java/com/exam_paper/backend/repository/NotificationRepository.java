@@ -50,4 +50,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Transactional
     void deleteByPacket_PacketId(Long packetId);
+
+    @Modifying
+    @Transactional
+    void deleteByUser_UserId(Long userId);
 }

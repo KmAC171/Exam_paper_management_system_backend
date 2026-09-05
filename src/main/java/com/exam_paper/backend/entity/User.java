@@ -36,6 +36,7 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(unique = true)
     private String email;
 
     @ManyToOne
@@ -44,6 +45,7 @@ public class User {
 
     private LocalDateTime lastLogin;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean isActive = true;
 }

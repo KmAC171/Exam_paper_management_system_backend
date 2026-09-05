@@ -20,20 +20,27 @@ public class FormDataController {
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
     private final PacketStatusRepository packetStatusRepository;
+    private final com.exam_paper.backend.repository.PacketRepository packetRepository;
 
     @GetMapping
     public Map<String, Object> getFormData() {
-        List<Course> courses = courseRepository.findAllByOrderByCourseName();
+        List<Course> courses = courseRepository.findAllWithDepartmentOrderByCourseCodeAsc();
         List<User> lecturers = userRepository.findByRole(User.Role.ROLE_USER);
         List<User> moderators = userRepository.findByRole(User.Role.ROLE_MODERATOR);
         List<PacketStatus> statuses = packetStatusRepository.findAll();
 
         return Map.of(
-                "courses", courses.stream().map(c -> Map.of(
-                        "id", c.getCourseId(),
-                        "code", c.getCourseCode(),
-                        "name", c.getCourseName()
-                )).toList(),
+                "courses", courses.stream().map(c -> {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", c.getCourseId());
+                    map.put("code", c.getCourseCode());
+                    map.put("name", c.getCourseName());
+                    map.put("department", c.getDepartment() != null ? c.getDepartment().getDepartmentName() : "Unassigned");
+                    map.put("lecturerId", c.getLecturer() != null ? c.getLecturer().getUserId() : null);
+                    map.put("lecturerName", c.getLecturer() != null ? c.getLecturer().getFullName() : "Unassigned");
+                    map.put("hasPacket", packetRepository.existsByCourse_CourseId(c.getCourseId()));
+                    return map;
+                }).toList(),
                 "lecturers", lecturers.stream().map(u -> Map.of(
                         "id", u.getUserId(),
                         "name", u.getFullName()

@@ -22,25 +22,25 @@ public class WorkflowService {
     private final ActivityLogService activityLogService;
 
     private static final List<String> STAGE_ORDER = List.of(
-            "DRAFT", "PENDING", "UNDER_MODERATION",
-            "APPROVED", "PRINTING_QUEUE", "COMPLETED"
+            "PENDING", "DRAFT", "SUBMITTED",
+            "APPROVED", "PRINTING", "COMPLETED"
     );
 
     private static final Map<String, String> STAGE_LABELS = Map.of(
-            "DRAFT", "Draft",
-            "PENDING", "Submitted",
-            "UNDER_MODERATION", "Moderation",
+            "PENDING", "Pending",
+            "DRAFT", "Drafting",
+            "SUBMITTED", "Moderation",
             "APPROVED", "Approved",
-            "PRINTING_QUEUE", "Printing",
+            "PRINTING", "Printing",
             "COMPLETED", "Completed"
     );
 
     private static final Map<String, String> STAGE_ACTORS = Map.of(
+            "PENDING", "Registry → Lecturer",
             "DRAFT", "Lecturer",
-            "PENDING", "Lecturer → System",
-            "UNDER_MODERATION", "Moderator",
-            "APPROVED", "HOD + Moderator",
-            "PRINTING_QUEUE", "Registry",
+            "SUBMITTED", "Moderator",
+            "APPROVED", "Moderator",
+            "PRINTING", "Lecturer / Registry",
             "COMPLETED", "System"
     );
 
