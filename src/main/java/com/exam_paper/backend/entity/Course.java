@@ -21,4 +21,12 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;
+
+    @ManyToOne
+    @JoinColumn(name = "lecturer_id")
+    private User lecturer;
+
+    @ManyToOne
+    @JoinColumn(name = "moderator_id")
+    private User moderator;
 }
