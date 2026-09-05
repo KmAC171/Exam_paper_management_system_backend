@@ -21,6 +21,47 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
+    public void createNotification(User targetUser, com.exam_paper.backend.entity.ExamPacket packet, String title, String message, String type, boolean isUrgent) {
+        Notification notification = Notification.builder()
+                .user(targetUser)
+                .packet(packet)
+                .courseCode(packet != null && packet.getCourse() != null ? packet.getCourse().getCourseCode() : null)
+                .title(title)
+                .message(message)
+                .type(type)
+                .isUrgent(isUrgent)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notificationRepository.save(notification);
+    }
+
+    public void notifyAR(String title, String message, String type, boolean isUrgent, String excludeUsername) {
+        List<User> arUsers = userRepository.findByRole(User.Role.ROLE_ADMIN);
+        for (User ar : arUsers) {
+            if (excludeUsername != null && excludeUsername.equalsIgnoreCase(ar.getUsername())) {
+                continue;
+            }
+            createNotification(ar, null, title, message, type, isUrgent);
+        }
+    }
+
+    public void notifyHOD(com.exam_paper.backend.entity.Department department, String title, String message, String type, boolean isUrgent, String excludeUsername) {
+        if (department == null || department.getDepartmentId() == null) return;
+        List<User> hods = userRepository.findByRoleAndDepartment_DepartmentId(User.Role.ROLE_GUEST, department.getDepartmentId());
+        for (User hod : hods) {
+            if (excludeUsername != null && excludeUsername.equalsIgnoreCase(hod.getUsername())) {
+                continue;
+            }
+            createNotification(hod, null, title, message, type, isUrgent);
+        }
+    }
+
+    public void notifyARAndHOD(com.exam_paper.backend.entity.Department department, String title, String message, String type, boolean isUrgent, String triggerUsername) {
+        notifyAR(title, message, type, isUrgent, triggerUsername);
+        notifyHOD(department, title, message, type, isUrgent, triggerUsername);
+    }
+
     public List<NotificationDTO> getNotifications(String username, String role) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
