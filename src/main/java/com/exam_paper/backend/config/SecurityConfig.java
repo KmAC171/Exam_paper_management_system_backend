@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/dashboard/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST", "ROLE_MODERATOR", "ROLE_USER")
+                        .requestMatchers("/api/hod/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_GUEST")
                         .requestMatchers(HttpMethod.POST, "/api/packets/*/comments").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
                         .requestMatchers(HttpMethod.DELETE, "/api/packets/comments/*").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")
                         .requestMatchers(HttpMethod.POST, "/api/packets/*/attachments").hasAnyAuthority("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_USER", "ROLE_GUEST")

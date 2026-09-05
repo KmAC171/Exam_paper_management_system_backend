@@ -102,8 +102,15 @@ public class PacketService {
         List<ExamPacket> packets;
 
         switch (role) {
-            case "ROLE_ADMIN", "ROLE_GUEST" ->
+            case "ROLE_ADMIN" ->
                     packets = packetRepository.findAllWithDetails();
+            case "ROLE_GUEST" -> {
+                if (user.getDepartment() != null) {
+                    packets = packetRepository.findByDepartmentIdWithDetails(user.getDepartment().getDepartmentId());
+                } else {
+                    packets = packetRepository.findAllWithDetails();
+                }
+            }
             case "ROLE_USER" ->
                     packets = packetRepository.findByLecturerId(user.getUserId());
             case "ROLE_MODERATOR" ->
@@ -171,7 +178,7 @@ public class PacketService {
         );
     }
 
-    private PacketDTO toDTO(ExamPacket p) {
+    public PacketDTO toDTO(ExamPacket p) {
         LocalDate today = LocalDate.now();
         LocalDate deadline = p.getDeadline();
 

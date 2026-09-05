@@ -39,6 +39,16 @@ public interface PacketRepository extends JpaRepository<ExamPacket, Long> {
             "WHERE m.userId = :userId")
     List<ExamPacket> findByModeratorId(@Param("userId") Long userId);
 
+    //department (HOD)
+    @Query("SELECT p FROM ExamPacket p " +
+            "LEFT JOIN FETCH p.course c " +
+            "LEFT JOIN FETCH c.department " +
+            "LEFT JOIN FETCH p.lecturer " +
+            "LEFT JOIN FETCH p.moderator " +
+            "LEFT JOIN FETCH p.status " +
+            "WHERE c.department.departmentId = :deptId")
+    List<ExamPacket> findByDepartmentIdWithDetails(@Param("deptId") Long deptId);
+
     @Query("SELECT p FROM ExamPacket p " +
             "LEFT JOIN FETCH p.course c " +
             "LEFT JOIN FETCH c.department " +
