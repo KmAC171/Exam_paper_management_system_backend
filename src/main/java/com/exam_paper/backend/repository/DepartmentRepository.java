@@ -6,4 +6,8 @@ import java.util.List;
 
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findAllByOrderByDepartmentName();
+
+    boolean existsByDepartmentNameIgnoreCase(String departmentName);
+
+    boolean existsByDepartmentNameIgnoreCaseAndDepartmentIdNot(String departmentName, Long departmentId);
 }

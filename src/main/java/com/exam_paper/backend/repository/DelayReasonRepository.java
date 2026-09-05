@@ -10,4 +10,8 @@ public interface DelayReasonRepository extends JpaRepository<DelayReason, Long> 
 
     @Query("SELECT d.reason, COUNT(d) FROM DelayReason d GROUP BY d.reason ORDER BY COUNT(d) DESC")
     List<Object[]> countByReason();
+
+    List<DelayReason> findByPacket_PacketId(Long packetId);
+
+    void deleteByPacket_PacketId(Long packetId);
 }

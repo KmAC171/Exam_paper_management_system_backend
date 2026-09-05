@@ -14,20 +14,20 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // AR/HOD — all notifications
     List<Notification> findAllByOrderByCreatedAtDesc();
 
-    // Lecturer — notifications for their packets
-    @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId OR n.packet.lecturer.userId = :userId ORDER BY n.createdAt DESC")
+    // Lecturer — notifications explicitly assigned to this user OR general packet notifications for their packets
+    @Query("SELECT n FROM Notification n WHERE (n.user.userId = :userId) OR (n.user IS NULL AND n.packet.lecturer.userId = :userId) ORDER BY n.createdAt DESC")
     List<Notification> findByUserOrPacketLecturer(@Param("userId") Long userId);
 
-    // Moderator — notifications for their assigned packets
-    @Query("SELECT n FROM Notification n WHERE n.user.userId = :userId OR n.packet.moderator.userId = :userId ORDER BY n.createdAt DESC")
+    // Moderator — notifications explicitly assigned to this user OR general packet notifications for their assigned packets
+    @Query("SELECT n FROM Notification n WHERE (n.user.userId = :userId) OR (n.user IS NULL AND n.packet.moderator.userId = :userId) ORDER BY n.createdAt DESC")
     List<Notification> findByUserOrPacketModerator(@Param("userId") Long userId);
 
     long countByIsReadFalse();
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.moderator.userId = :userId)")
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND ((n.user.userId = :userId) OR (n.user IS NULL AND n.packet.moderator.userId = :userId))")
     long countUnreadByModeratorId(@Param("userId") Long userId);
 
-    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND (n.user.userId = :userId OR n.packet.lecturer.userId = :userId)")
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.isRead = false AND ((n.user.userId = :userId) OR (n.user IS NULL AND n.packet.lecturer.userId = :userId))")
     long countUnreadByLecturerId(@Param("userId") Long userId);
 
     @Modifying
@@ -37,11 +37,17 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.moderator.userId = :userId")
+    @Query("UPDATE Notification n SET n.isRead = true WHERE (n.user.userId = :userId) OR (n.user IS NULL AND n.packet.moderator.userId = :userId)")
     void markAllAsReadForModerator(@Param("userId") Long userId);
 
     @Modifying
     @Transactional
-    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userId = :userId OR n.packet.lecturer.userId = :userId")
+    @Query("UPDATE Notification n SET n.isRead = true WHERE (n.user.userId = :userId) OR (n.user IS NULL AND n.packet.lecturer.userId = :userId)")
     void markAllAsReadForLecturer(@Param("userId") Long userId);
+
+    List<Notification> findByPacket_PacketId(Long packetId);
+
+    @Modifying
+    @Transactional
+    void deleteByPacket_PacketId(Long packetId);
 }
