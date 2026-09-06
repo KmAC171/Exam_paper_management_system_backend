@@ -18,7 +18,6 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserDTO loginRequest) {
-
         String token = userService.login(
                 loginRequest.getUsername(),
                 loginRequest.getPassword()
@@ -28,23 +27,33 @@ public class UserController {
             return ResponseEntity.ok(Map.of("token", token));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid Username or Password!");
+                    .body(Map.of("message", "Invalid Username or Password!"));
         }
-
     }
+
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody UserDTO registerRequest) {
-        userService.register(registerRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+    public ResponseEntity<?> register(@RequestBody UserDTO registerRequest) {
+        try {
+            userService.register(registerRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("message", "User registered successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Registration failed: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             userService.logout(token);
-            return ResponseEntity.ok("Logged out successfully");
+            return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
         }
-        return ResponseEntity.badRequest().body("No token provided");
+        return ResponseEntity.badRequest().body(Map.of("message", "No token provided"));
     }
 }
+
