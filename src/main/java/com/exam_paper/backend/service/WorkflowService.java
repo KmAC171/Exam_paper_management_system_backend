@@ -21,28 +21,44 @@ public class WorkflowService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
 
-    private static final List<String> STAGE_ORDER = List.of(
-            "PENDING", "DRAFT", "SUBMITTED",
-            "APPROVED", "PRINTING", "COMPLETED"
+    public record StageDefinition(String stageKey, String label, String actor, List<String> matchingStatuses) {}
+
+    public static final List<StageDefinition> WORKFLOW_STAGES = List.of(
+            new StageDefinition("PENDING", "Pending", "Registry assigned",
+                    List.of("PENDING", "INITIALIZED", "CREATED")),
+            new StageDefinition("DRAFT", "Drafting", "Lecturer preparing",
+                    List.of("DRAFT", "DRAFTING", "START_DRAFT")),
+            new StageDefinition("MODERATION", "Moderation", "Moderator review",
+                    List.of("SUBMITTED", "UNDER_MODERATION", "MODERATION", "REJECTED", "RETURNED", "DELAYED")),
+            new StageDefinition("APPROVED", "Approved", "Moderator approved",
+                    List.of("APPROVED", "APPROVE")),
+            new StageDefinition("PRINTING", "Printing", "Lecturer printing",
+                    List.of("PRINTING", "PRINTING_QUEUE", "PRINT")),
+            new StageDefinition("PAPERS_STORED", "Papers Stored", "Safe custody",
+                    List.of("PAPERS STORED", "PAPERS_STORED", "STORED", "SAFE_CUSTODY")),
+            new StageDefinition("ANSWER_SHEETS_TAKEN", "Answer Sheets Taken", "Exam finished & collected",
+                    List.of("ANSWER SHEETS TAKEN", "ANSWER_SHEETS_TAKEN", "SHEETS_TAKEN")),
+            new StageDefinition("MARKING", "Marking", "Lecturer marking",
+                    List.of("MARKING", "UNDER_MARKING")),
+            new StageDefinition("MARKING_COMPLETE", "Marking Complete", "Finalized",
+                    List.of("MARKING COMPLETE", "MARKING_COMPLETE", "COMPLETED", "COMPLETE", "FINALIZED"))
     );
 
-    private static final Map<String, String> STAGE_LABELS = Map.of(
-            "PENDING", "Pending",
-            "DRAFT", "Drafting",
-            "SUBMITTED", "Moderation",
-            "APPROVED", "Approved",
-            "PRINTING", "Printing",
-            "COMPLETED", "Completed"
-    );
-
-    private static final Map<String, String> STAGE_ACTORS = Map.of(
-            "PENDING", "Registry → Lecturer",
-            "DRAFT", "Lecturer",
-            "SUBMITTED", "Moderator",
-            "APPROVED", "Moderator",
-            "PRINTING", "Lecturer / Registry",
-            "COMPLETED", "System"
-    );
+    public static int getStageIndexForStatus(String status) {
+        if (status == null || status.isBlank()) return 0;
+        String normalized = status.trim().toUpperCase().replace("-", "_");
+        for (int i = 0; i < WORKFLOW_STAGES.size(); i++) {
+            StageDefinition def = WORKFLOW_STAGES.get(i);
+            for (String match : def.matchingStatuses()) {
+                if (match.equalsIgnoreCase(normalized)
+                        || match.replace(" ", "_").equalsIgnoreCase(normalized)
+                        || match.replace("_", " ").equalsIgnoreCase(normalized)) {
+                    return i;
+                }
+            }
+        }
+        return 0;
+    }
 
     public List<WorkflowPacketDTO> getWorkflowPackets(String username, String role) {
         User user = userRepository.findByUsername(username)
@@ -68,16 +84,17 @@ public class WorkflowService {
     }
 
     private WorkflowPacketDTO toWorkflowDTO(ExamPacket p) {
-        String currentStatus = p.getStatus() != null ? p.getStatus().getStatusName() : "DRAFT";
-        int currentStageIndex = STAGE_ORDER.indexOf(currentStatus);
-        if (currentStageIndex == -1) {
-            if ("DELAYED".equalsIgnoreCase(currentStatus)) {
-                currentStageIndex = 2; // Treat delayed as moderation stage
-            } else {
-                currentStageIndex = 0;
-            }
-        }
-        int currentStage = currentStageIndex + 1;
+        String currentStatus = p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING";
+        int currentStageIndex = getStageIndexForStatus(currentStatus);
+
+        boolean isPacketCompleted = "COMPLETED".equalsIgnoreCase(currentStatus)
+                || "MARKING COMPLETE".equalsIgnoreCase(currentStatus)
+                || "MARKING_COMPLETE".equalsIgnoreCase(currentStatus)
+                || "COMPLETE".equalsIgnoreCase(currentStatus)
+                || "FINALIZED".equalsIgnoreCase(currentStatus);
+
+        int totalStages = WORKFLOW_STAGES.size();
+        int currentStage = isPacketCompleted ? totalStages : (currentStageIndex + 1);
 
         String packetIdStr = String.format("PKT-%d-%03d",
                 p.getDeadline() != null ? p.getDeadline().getYear() : 2026,
@@ -86,34 +103,33 @@ public class WorkflowService {
         // get history for this packet
         List<ActivityLog> history = activityLogService.getPacketHistory(p.getPacketId());
 
-        // group history events by stageName
-        Map<String, List<ActivityLog>> byStage = history.stream()
-                .filter(h -> h.getStageName() != null)
-                .collect(Collectors.groupingBy(ActivityLog::getStageName));
-
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d");
 
-        List<WorkflowStageDTO> stages = new ArrayList<>();
-        for (int i = 0; i < STAGE_ORDER.size(); i++) {
-            String stageKey = STAGE_ORDER.get(i);
-            boolean completed = i < currentStageIndex;
-            boolean current = i == currentStageIndex;
-
-            List<WorkflowEventDTO> events = byStage
-                    .getOrDefault(stageKey, List.of())
-                    .stream()
-                    .map(log -> new WorkflowEventDTO(
+        // Map events to stage indices
+        Map<Integer, List<WorkflowEventDTO>> eventsByStageIndex = new HashMap<>();
+        for (ActivityLog log : history) {
+            int logStageIdx = getStageIndexForStatus(log.getStageName());
+            eventsByStageIndex.computeIfAbsent(logStageIdx, k -> new ArrayList<>())
+                    .add(new WorkflowEventDTO(
                             log.getMessage(),
                             log.getActorName(),
                             log.getCreatedAt() != null
-                                    ? log.getCreatedAt().format(fmt) + " · " + log.getActorName()
+                                    ? log.getCreatedAt().format(fmt) + (log.getActorName() != null && !log.getActorName().isBlank() ? " · " + log.getActorName() : "")
                                     : ""
-                    ))
-                    .collect(Collectors.toList());
+                    ));
+        }
+
+        List<WorkflowStageDTO> stages = new ArrayList<>();
+        for (int i = 0; i < totalStages; i++) {
+            StageDefinition def = WORKFLOW_STAGES.get(i);
+            boolean completed = isPacketCompleted || (i < currentStageIndex);
+            boolean current = !isPacketCompleted && (i == currentStageIndex);
+
+            List<WorkflowEventDTO> events = eventsByStageIndex.getOrDefault(i, List.of());
 
             stages.add(new WorkflowStageDTO(
-                    STAGE_LABELS.getOrDefault(stageKey, stageKey),
-                    STAGE_ACTORS.getOrDefault(stageKey, "System"),
+                    def.label(),
+                    def.actor(),
                     completed,
                     current,
                     events
@@ -126,7 +142,7 @@ public class WorkflowService {
                 p.getCourse() != null ? p.getCourse().getCourseName() : "N/A",
                 currentStatus,
                 currentStage,
-                6,
+                totalStages,
                 stages
         );
     }

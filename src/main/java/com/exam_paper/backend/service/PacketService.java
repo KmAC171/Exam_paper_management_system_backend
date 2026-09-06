@@ -60,6 +60,9 @@ public class PacketService {
             getOrCreateStatus("APPROVED");
             getOrCreateStatus("REJECTED");
             getOrCreateStatus("PRINTING");
+            getOrCreateStatus("PAPERS STORED");
+            getOrCreateStatus("ANSWER SHEETS TAKEN");
+            getOrCreateStatus("MARKING");
             getOrCreateStatus("COMPLETED");
 
             List<Course> allCourses = courseRepository.findAll();
@@ -632,10 +635,70 @@ public class PacketService {
                     notificationRepository.save(notifLec);
                 }
             }
-            case "COMPLETE", "COMPLETED" -> {
+            case "PAPERS_STORED", "PAPERS STORED", "STORE" -> {
+                newStatusName = "PAPERS STORED";
+                stageName = "PAPERS_STORED";
+                logMessage = "Printed exam papers safely stored in custody by " + actor.getFullName();
+
+                if (packet.getLecturer() != null) {
+                    Notification notifLec = Notification.builder()
+                            .user(packet.getLecturer())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Papers Stored")
+                            .message("Printed exam papers for " + courseCode + " (" + courseName + ") are safely stored in custody.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifLec);
+                }
+            }
+            case "ANSWER_SHEETS_TAKEN", "ANSWER SHEETS TAKEN", "SHEETS_TAKEN" -> {
+                newStatusName = "ANSWER SHEETS TAKEN";
+                stageName = "ANSWER_SHEETS_TAKEN";
+                logMessage = "Student answer sheets retrieved from store by " + actor.getFullName();
+
+                if (packet.getLecturer() != null) {
+                    Notification notifLec = Notification.builder()
+                            .user(packet.getLecturer())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Answer Sheets Collected")
+                            .message("Answer sheets for " + courseCode + " (" + courseName + ") have been retrieved for marking.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifLec);
+                }
+            }
+            case "MARKING", "START_MARKING" -> {
+                newStatusName = "MARKING";
+                stageName = "MARKING";
+                logMessage = "Exam paper marking started by " + actor.getFullName();
+
+                if (packet.getLecturer() != null) {
+                    Notification notifLec = Notification.builder()
+                            .user(packet.getLecturer())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Marking in Progress")
+                            .message("Marking in progress for " + courseCode + " (" + courseName + ").")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifLec);
+                }
+            }
+            case "MARKING_COMPLETE", "MARKING COMPLETE", "COMPLETE", "COMPLETED" -> {
                 newStatusName = "COMPLETED";
                 stageName = "COMPLETED";
-                logMessage = "Exam packet marked completed by " + actor.getFullName();
+                logMessage = "Exam packet marked completed and stored by " + actor.getFullName();
 
                 // 1. Notify Lecturer
                 if (packet.getLecturer() != null) {
