@@ -68,7 +68,7 @@ public class WorkflowService {
 
         List<ExamPacket> packets;
         switch (userRole) {
-            case "ROLE_ADMIN", "ROLE_GUEST" ->
+            case "ROLE_ADMIN", "ROLE_GUEST", "ROLE_SYSTEM_ADMIN" ->
                     packets = packetRepository.findAllWithDetails();
             case "ROLE_USER" ->
                     packets = packetRepository.findByLecturerId(user.getUserId());
