@@ -168,7 +168,7 @@ public class HodService {
         List<HodWorkloadDTO> workloadList = new ArrayList<>();
 
         for (User staff : relevantStaff) {
-            if (staff.getRole() == User.Role.ROLE_ADMIN) continue; // Skip AR
+            if (staff.getRole() == User.Role.ROLE_ADMIN || staff.getRole() == User.Role.ROLE_SYSTEM_ADMIN) continue; // Skip AR and SystemAdmin
 
             List<ExamPacket> assignedAsLecturer = deptPackets.stream()
                     .filter(p -> p.getLecturer() != null && p.getLecturer().getUserId().equals(staff.getUserId()))

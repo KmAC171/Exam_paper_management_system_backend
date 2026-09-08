@@ -70,7 +70,7 @@ public class NotificationService {
 
         List<Notification> notifications;
         switch (userRole) {
-            case "ROLE_ADMIN", "ROLE_GUEST" ->
+            case "ROLE_ADMIN", "ROLE_GUEST", "ROLE_SYSTEM_ADMIN" ->
                     notifications = notificationRepository.findAllByOrderByCreatedAtDesc();
             case "ROLE_USER" ->
                     notifications = notificationRepository.findByUserOrPacketLecturer(user.getUserId());
@@ -91,7 +91,7 @@ public class NotificationService {
 
         String userRole = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
         switch (userRole) {
-            case "ROLE_ADMIN", "ROLE_GUEST" -> notificationRepository.markAllAsRead();
+            case "ROLE_ADMIN", "ROLE_GUEST", "ROLE_SYSTEM_ADMIN" -> notificationRepository.markAllAsRead();
             case "ROLE_USER" -> notificationRepository.markAllAsReadForLecturer(user.getUserId());
             case "ROLE_MODERATOR" -> notificationRepository.markAllAsReadForModerator(user.getUserId());
             default -> notificationRepository.markAllAsReadForModerator(user.getUserId());
@@ -115,7 +115,7 @@ public class NotificationService {
 
         String userRole = user.getRole() != null ? user.getRole().name() : "ROLE_ADMIN";
         return switch (userRole) {
-            case "ROLE_ADMIN", "ROLE_GUEST" -> notificationRepository.countByIsReadFalse();
+            case "ROLE_ADMIN", "ROLE_GUEST", "ROLE_SYSTEM_ADMIN" -> notificationRepository.countByIsReadFalse();
             case "ROLE_USER" -> notificationRepository.countUnreadByLecturerId(user.getUserId());
             case "ROLE_MODERATOR" -> notificationRepository.countUnreadByModeratorId(user.getUserId());
             default -> notificationRepository.countUnreadByModeratorId(user.getUserId());
