@@ -105,7 +105,7 @@ public class PacketService {
         List<ExamPacket> packets;
 
         switch (role) {
-            case "ROLE_ADMIN" ->
+            case "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN" ->
                     packets = packetRepository.findAllWithDetails();
             case "ROLE_GUEST" -> {
                 if (user.getDepartment() != null) {
