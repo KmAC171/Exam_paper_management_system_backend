@@ -16,7 +16,8 @@ public class User {
         ROLE_ADMIN,
         ROLE_MODERATOR,
         ROLE_USER,
-        ROLE_GUEST
+        ROLE_GUEST,
+        ROLE_SYSTEM_ADMIN
     }
 
     @Id
@@ -33,7 +34,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private Role role;
 
     @Column(unique = true)

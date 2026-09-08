@@ -32,7 +32,8 @@ public class UserManagementService {
             "ROLE_ADMIN", "Asst. Registrar",
             "ROLE_GUEST", "Head of Dept.",
             "ROLE_USER", "Lecturer",
-            "ROLE_MODERATOR", "Moderator"
+            "ROLE_MODERATOR", "Moderator",
+            "ROLE_SYSTEM_ADMIN", "System Admin"
     );
 
     private static final List<String> AVATAR_COLORS = List.of(
