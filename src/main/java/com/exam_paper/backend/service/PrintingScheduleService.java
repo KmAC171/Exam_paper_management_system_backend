@@ -45,7 +45,7 @@ public class PrintingScheduleService {
 
         List<String> excludedStatuses = List.of("CANCELLED", "MISSED");
         List<PrintingSchedule> activeBookings = printingScheduleRepository
-                .findByScheduleDateAndLocationAndStatusNotIn(effectiveDate, effectiveLocation, excludedStatuses);
+                .findByScheduleDateAndStatusNotIn(effectiveDate, excludedStatuses);
 
         List<SlotAvailabilityDTO> slots = new ArrayList<>();
         LocalTime currentStart = WORK_START;
@@ -140,7 +140,6 @@ public class PrintingScheduleService {
         // Strict mutual exclusion / conflict validation
         List<PrintingSchedule> overlaps = printingScheduleRepository.findOverlappingActiveSchedules(
                 request.getScheduleDate(),
-                location,
                 request.getStartTime(),
                 request.getEndTime(),
                 null
@@ -256,7 +255,6 @@ public class PrintingScheduleService {
         // Check for conflicts excluding current schedule
         List<PrintingSchedule> overlaps = printingScheduleRepository.findOverlappingActiveSchedules(
                 request.getScheduleDate(),
-                location,
                 request.getStartTime(),
                 request.getEndTime(),
                 schedule.getScheduleId()

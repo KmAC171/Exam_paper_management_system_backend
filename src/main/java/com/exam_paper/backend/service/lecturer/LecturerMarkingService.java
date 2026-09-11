@@ -58,6 +58,10 @@ public class LecturerMarkingService {
         User lecturer = (lId != null ? userRepository.findById(lId) : userRepository.findByUsername(request.getLecturerId()))
                 .orElseThrow(() -> new RuntimeException("Lecturer not found: " + request.getLecturerId()));
 
+        if (packet.getLecturer() != null && !packet.getLecturer().getUserId().equals(lecturer.getUserId())) {
+            throw new IllegalArgumentException("Only the designated course lecturer can add or update marking scripts for this exam packet.");
+        }
+
         Optional<Marking> existingMarking = markingRepository.findByPacketPacketId(packet.getPacketId());
         Marking marking;
 

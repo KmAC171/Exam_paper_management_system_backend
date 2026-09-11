@@ -71,7 +71,7 @@ public class WorkflowService {
             case "ROLE_ADMIN", "ROLE_GUEST", "ROLE_SYSTEM_ADMIN" ->
                     packets = packetRepository.findAllWithDetails();
             case "ROLE_USER" ->
-                    packets = packetRepository.findByLecturerId(user.getUserId());
+                    packets = packetRepository.findByLecturerOrModeratorId(user.getUserId());
             case "ROLE_MODERATOR" ->
                     packets = packetRepository.findByModeratorId(user.getUserId());
             default ->
