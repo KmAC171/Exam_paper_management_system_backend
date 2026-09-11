@@ -30,13 +30,12 @@ public interface PrintingScheduleRepository extends JpaRepository<PrintingSchedu
 
     List<PrintingSchedule> findByScheduleDateAndStatusNotIn(LocalDate scheduleDate, List<String> excludedStatuses);
 
-    @Query("SELECT s FROM PrintingSchedule s WHERE s.scheduleDate = :date AND s.location = :location " +
+    @Query("SELECT s FROM PrintingSchedule s WHERE s.scheduleDate = :date " +
            "AND s.status NOT IN ('CANCELLED', 'MISSED') " +
            "AND (:excludeId IS NULL OR s.scheduleId != :excludeId) " +
            "AND (s.startTime < :endTime AND s.endTime > :startTime)")
     List<PrintingSchedule> findOverlappingActiveSchedules(
             @Param("date") LocalDate date,
-            @Param("location") String location,
             @Param("startTime") LocalTime startTime,
             @Param("endTime") LocalTime endTime,
             @Param("excludeId") Long excludeId
