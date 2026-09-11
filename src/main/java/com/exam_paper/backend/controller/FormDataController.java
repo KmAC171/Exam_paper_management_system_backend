@@ -26,7 +26,12 @@ public class FormDataController {
     public Map<String, Object> getFormData() {
         List<Course> courses = courseRepository.findAllWithDepartmentOrderByCourseCodeAsc();
         List<User> lecturers = userRepository.findByRole(User.Role.ROLE_USER);
-        List<User> moderators = userRepository.findByRole(User.Role.ROLE_MODERATOR);
+        List<User> moderatorCandidates = new java.util.ArrayList<>(lecturers);
+        for (User u : userRepository.findByRole(User.Role.ROLE_MODERATOR)) {
+            if (!moderatorCandidates.contains(u)) {
+                moderatorCandidates.add(u);
+            }
+        }
         List<PacketStatus> statuses = packetStatusRepository.findAll();
 
         return Map.of(
@@ -45,7 +50,7 @@ public class FormDataController {
                         "id", u.getUserId(),
                         "name", u.getFullName()
                 )).toList(),
-                "moderators", moderators.stream().map(u -> Map.of(
+                "moderators", moderatorCandidates.stream().map(u -> Map.of(
                         "id", u.getUserId(),
                         "name", u.getFullName()
                 )).toList(),
