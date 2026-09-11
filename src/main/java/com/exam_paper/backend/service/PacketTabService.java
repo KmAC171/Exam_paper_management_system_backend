@@ -161,6 +161,15 @@ public class PacketTabService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String userRole = user.getRole() != null ? user.getRole().name() : "ROLE_USER";
+        boolean isPrivileged = "ROLE_ADMIN".equals(userRole) || "ROLE_SYSTEM_ADMIN".equals(userRole) || "ROLE_GUEST".equals(userRole);
+        if (!isPrivileged && (user.getRole() == User.Role.ROLE_USER || user.getRole() == User.Role.ROLE_MODERATOR)) {
+            boolean isAuthor = packet.getLecturer() != null && packet.getLecturer().getUserId().equals(user.getUserId());
+            if (!isAuthor) {
+                throw new IllegalArgumentException("As an assigned moderator, you can only review and download attachments. Only the course lecturer can upload exam files.");
+            }
+        }
+
         // Create uploads directory
         File uploadDir = new File(UPLOAD_DIR + packetId);
         if (!uploadDir.exists()) uploadDir.mkdirs();

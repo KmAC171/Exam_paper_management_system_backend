@@ -115,7 +115,7 @@ public class PacketService {
                 }
             }
             case "ROLE_USER" ->
-                    packets = packetRepository.findByLecturerId(user.getUserId());
+                    packets = packetRepository.findByLecturerOrModeratorId(user.getUserId());
             case "ROLE_MODERATOR" ->
                     packets = packetRepository.findByModeratorId(user.getUserId());
             default ->
@@ -156,29 +156,39 @@ public class PacketService {
         String deptName = (p.getCourse() != null && p.getCourse().getDepartment() != null)
                 ? p.getCourse().getDepartment().getDepartmentName()
                 : "Unassigned";
+        Long lecturerId = p.getLecturer() != null ? p.getLecturer().getUserId() : null;
         String lecturerName = p.getLecturer() != null ? p.getLecturer().getFullName() : "Unassigned";
+        String lecturerUsername = p.getLecturer() != null ? p.getLecturer().getUsername() : null;
+
+        Long moderatorId = p.getModerator() != null ? p.getModerator().getUserId() : null;
         String moderatorName = p.getModerator() != null ? p.getModerator().getFullName() : "Unassigned";
+        String moderatorUsername = p.getModerator() != null ? p.getModerator().getUsername() : null;
+
         String statusName = p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING";
 
-        return new PacketDetailDTO(
-                packetId,
-                courseCode,
-                courseName,
-                deptName,
-                lecturerName,
-                moderatorName,
-                deadline,
-                p.getModerationDeadline(),
-                p.getExamDate(),
-                statusName,
-                priority,
-                overdue,
-                p.getDuration(),
-                p.getTotalMarks(),
-                p.getQuestions(),
-                p.getFormat(),
-                p.getModeratorNote()
-        );
+        return PacketDetailDTO.builder()
+                .packetId(packetId)
+                .courseCode(courseCode)
+                .courseName(courseName)
+                .department(deptName)
+                .lecturerId(lecturerId)
+                .lecturerName(lecturerName)
+                .lecturerUsername(lecturerUsername)
+                .moderatorId(moderatorId)
+                .moderatorName(moderatorName)
+                .moderatorUsername(moderatorUsername)
+                .deadline(deadline)
+                .moderationDeadline(p.getModerationDeadline())
+                .examDate(p.getExamDate())
+                .status(statusName)
+                .priority(priority)
+                .overdue(overdue)
+                .duration(p.getDuration())
+                .totalMarks(p.getTotalMarks())
+                .questions(p.getQuestions())
+                .format(p.getFormat())
+                .moderatorNote(p.getModeratorNote())
+                .build();
     }
 
     public PacketDTO toDTO(ExamPacket p) {
@@ -205,22 +215,32 @@ public class PacketService {
 
         String courseCode = p.getCourse() != null ? p.getCourse().getCourseCode() : "N/A";
         String courseName = p.getCourse() != null ? p.getCourse().getCourseName() : "N/A";
+        Long lecturerId = p.getLecturer() != null ? p.getLecturer().getUserId() : null;
         String lecturerName = p.getLecturer() != null ? p.getLecturer().getFullName() : "Unassigned";
+        String lecturerUsername = p.getLecturer() != null ? p.getLecturer().getUsername() : null;
+
+        Long moderatorId = p.getModerator() != null ? p.getModerator().getUserId() : null;
         String moderatorName = p.getModerator() != null ? p.getModerator().getFullName() : "Unassigned";
+        String moderatorUsername = p.getModerator() != null ? p.getModerator().getUsername() : null;
+
         String statusName = p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING";
 
-        return new PacketDTO(
-                p.getPacketId(),
-                packetId,
-                courseCode,
-                courseName,
-                lecturerName,
-                moderatorName,
-                deadline,
-                overdue,
-                statusName,
-                priority
-        );
+        return PacketDTO.builder()
+                .id(p.getPacketId())
+                .packetId(packetId)
+                .courseCode(courseCode)
+                .courseName(courseName)
+                .lecturerId(lecturerId)
+                .lecturerName(lecturerName)
+                .lecturerUsername(lecturerUsername)
+                .moderatorId(moderatorId)
+                .moderatorName(moderatorName)
+                .moderatorUsername(moderatorUsername)
+                .deadline(deadline)
+                .overdue(overdue)
+                .status(statusName)
+                .priority(priority)
+                .build();
     }
 
     public PacketDTO createPacket(CreatePacketDTO dto) {
@@ -246,6 +266,10 @@ public class PacketService {
         User moderator = null;
         if (dto.getModeratorId() != null) {
             moderator = userRepository.findById(dto.getModeratorId()).orElse(null);
+        }
+
+        if (lecturer != null && moderator != null && lecturer.getUserId().equals(moderator.getUserId())) {
+            throw new IllegalArgumentException("A lecturer cannot be assigned as the moderator for their own exam packet.");
         }
 
         PacketStatus status = null;
@@ -350,6 +374,10 @@ public class PacketService {
             moderator = userRepository.findById(dto.getModeratorId()).orElse(null);
         } else {
             moderator = packet.getModerator();
+        }
+
+        if (lecturer != null && moderator != null && lecturer.getUserId().equals(moderator.getUserId())) {
+            throw new IllegalArgumentException("A lecturer cannot be assigned as the moderator for their own exam packet.");
         }
 
         PacketStatus status = null;
@@ -464,11 +492,29 @@ public class PacketService {
         String courseCode = packet.getCourse() != null ? packet.getCourse().getCourseCode() : "N/A";
         String courseName = packet.getCourse() != null ? packet.getCourse().getCourseName() : "N/A";
 
-        // Determine new status and messages
         String newStatusName;
         String stageName;
         String logMessage;
         String action = dto.getAction() != null ? dto.getAction().toUpperCase() : "";
+
+        String actorRole = actor.getRole() != null ? actor.getRole().name() : "ROLE_USER";
+        boolean isPrivileged = "ROLE_ADMIN".equals(actorRole) || "ROLE_SYSTEM_ADMIN".equals(actorRole) || "ROLE_GUEST".equals(actorRole);
+
+        if (!isPrivileged && (actor.getRole() == User.Role.ROLE_USER || actor.getRole() == User.Role.ROLE_MODERATOR)) {
+            boolean isModeratorAction = "APPROVE".equalsIgnoreCase(action) || "APPROVED".equalsIgnoreCase(action) ||
+                                        "REJECT".equalsIgnoreCase(action) || "REJECTED".equalsIgnoreCase(action) ||
+                                        "REVISE".equalsIgnoreCase(action) || "RETURN".equalsIgnoreCase(action);
+
+            if (isModeratorAction) {
+                if (packet.getModerator() == null || !packet.getModerator().getUserId().equals(actor.getUserId())) {
+                    throw new IllegalArgumentException("Only the designated moderator can review and approve or reject this exam packet.");
+                }
+            } else {
+                if (packet.getLecturer() == null || !packet.getLecturer().getUserId().equals(actor.getUserId())) {
+                    throw new IllegalArgumentException("As an assigned moderator, you can only review, comment, and approve or reject this exam paper. Other author workflow actions are restricted to the course lecturer.");
+                }
+            }
+        }
 
         if (dto.getNote() != null && !dto.getNote().trim().isEmpty()) {
             packet.setModeratorNote(dto.getNote().trim());
