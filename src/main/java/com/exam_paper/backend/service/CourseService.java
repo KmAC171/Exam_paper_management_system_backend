@@ -133,6 +133,10 @@ public class CourseService {
             throw new IllegalArgumentException("A course with name '" + name + "' already exists in department '" + department.getDepartmentName() + "'.");
         }
 
+        if (dto.getLecturerId() != null && dto.getModeratorId() != null && dto.getLecturerId().equals(dto.getModeratorId())) {
+            throw new IllegalArgumentException("A Lecturer cannot be assigned as the Moderator for the same course.");
+        }
+
         User lecturer = null;
         if (dto.getLecturerId() != null) {
             lecturer = userRepository.findById(dto.getLecturerId()).orElse(null);
@@ -262,6 +266,10 @@ public class CourseService {
 
         Long prevLecturerId = course.getLecturer() != null ? course.getLecturer().getUserId() : null;
         Long prevModeratorId = course.getModerator() != null ? course.getModerator().getUserId() : null;
+
+        if (dto.getLecturerId() != null && dto.getModeratorId() != null && dto.getLecturerId().equals(dto.getModeratorId())) {
+            throw new IllegalArgumentException("A Lecturer cannot be assigned as the Moderator for the same course.");
+        }
 
         User newLecturer = null;
         if (dto.getLecturerId() != null) {
@@ -393,7 +401,14 @@ public class CourseService {
                         .build())
                 .collect(Collectors.toList());
 
-        List<CourseStaffOptionsDTO.StaffOptionDTO> moderators = userRepository.findByRole(User.Role.ROLE_MODERATOR).stream()
+        List<User> modStaff = new java.util.ArrayList<>(userRepository.findByRole(User.Role.ROLE_USER));
+        for (User u : userRepository.findByRole(User.Role.ROLE_MODERATOR)) {
+            if (!modStaff.contains(u)) {
+                modStaff.add(u);
+            }
+        }
+
+        List<CourseStaffOptionsDTO.StaffOptionDTO> moderators = modStaff.stream()
                 .map(u -> CourseStaffOptionsDTO.StaffOptionDTO.builder()
                         .id(u.getUserId())
                         .name(u.getFullName())
