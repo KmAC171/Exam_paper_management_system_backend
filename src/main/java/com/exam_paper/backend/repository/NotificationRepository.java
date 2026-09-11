@@ -14,6 +14,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // AR/HOD — all notifications
     List<Notification> findAllByOrderByCreatedAtDesc();
 
+    // Unified Lecturer/Moderator — notifications where user is directly notified, packet lecturer, or packet moderator
+    @Query("SELECT n FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.lecturer l LEFT JOIN p.moderator m LEFT JOIN n.user u WHERE (u.userId = :userId OR l.userId = :userId OR m.userId = :userId) ORDER BY n.createdAt DESC")
+    List<Notification> findByUserOrPacketLecturerOrModerator(@Param("userId") Long userId);
+
     // Lecturer — notifications for their packets
     @Query("SELECT n FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.lecturer l LEFT JOIN n.user u WHERE (u.userId = :userId OR l.userId = :userId) ORDER BY n.createdAt DESC")
     List<Notification> findByUserOrPacketLecturer(@Param("userId") Long userId);
@@ -23,6 +27,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByUserOrPacketModerator(@Param("userId") Long userId);
 
     long countByIsReadFalse();
+
+    @Query("SELECT COUNT(n) FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.lecturer l LEFT JOIN p.moderator m LEFT JOIN n.user u WHERE n.isRead = false AND (u.userId = :userId OR l.userId = :userId OR m.userId = :userId)")
+    long countUnreadByLecturerOrModeratorId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(n) FROM Notification n LEFT JOIN n.packet p LEFT JOIN p.moderator m LEFT JOIN n.user u WHERE n.isRead = false AND (u.userId = :userId OR m.userId = :userId)")
     long countUnreadByModeratorId(@Param("userId") Long userId);
@@ -34,6 +41,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Transactional
     @Query("UPDATE Notification n SET n.isRead = true")
     void markAllAsRead();
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.id IN (SELECT n2.id FROM Notification n2 LEFT JOIN n2.packet p LEFT JOIN p.lecturer l LEFT JOIN p.moderator m LEFT JOIN n2.user u WHERE u.userId = :userId OR l.userId = :userId OR m.userId = :userId)")
+    void markAllAsReadForLecturerOrModerator(@Param("userId") Long userId);
 
     @Modifying
     @Transactional
