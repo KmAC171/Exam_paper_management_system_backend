@@ -20,6 +20,7 @@ public class WorkflowService {
     private final PacketRepository packetRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final PacketService packetService;
 
     public record StageDefinition(String stageKey, String label, String actor, List<String> matchingStatuses) {}
 
@@ -38,31 +39,37 @@ public class WorkflowService {
                     List.of("PAPERS STORED", "PAPERS_STORED", "STORED", "SAFE_CUSTODY")),
             new StageDefinition("ANSWER_SHEETS_TAKEN", "Answer Sheets Taken", "Exam finished & collected",
                     List.of("ANSWER SHEETS TAKEN", "ANSWER_SHEETS_TAKEN", "SHEETS_TAKEN")),
-            new StageDefinition("MARKING", "Marking", "Lecturer marking",
-                    List.of("MARKING", "UNDER_MARKING")),
-            new StageDefinition("MARKING_COMPLETE", "Marking Complete", "Finalized",
-                    List.of("MARKING COMPLETE", "MARKING_COMPLETE", "COMPLETED", "COMPLETE", "FINALIZED"))
+            new StageDefinition("FIRST_MARKING", "First Marking", "Lecturer grading",
+                    List.of("FIRST_MARKING", "FIRST MARKING", "1ST_MARKING", "MARKING", "UNDER_MARKING", "START_MARKING")),
+            new StageDefinition("SECOND_MARKING", "Second Marking", "Moderator second marking",
+                    List.of("SECOND_MARKING", "SECOND MARKING", "2ND_MARKING", "UNDER_SECOND_MARKING", "START_SECOND_MARKING", "SECOND_MARKING_COMPLETE", "SECOND MARKING COMPLETE", "MODERATOR_MARKING")),
+            new StageDefinition("COMPLETED", "Completed", "Archived & Finalized",
+                    List.of("COMPLETED", "COMPLETE", "FINALIZED", "DONE"))
     );
 
-    public static int getStageIndexForStatus(String status) {
-        if (status == null || status.isBlank()) return 0;
-        String normalized = status.trim().toUpperCase().replace("-", "_");
+    public static int getStageIndexForStatus(String statusName) {
+        if (statusName == null) return 0;
+        String clean = statusName.trim().toUpperCase();
         for (int i = 0; i < WORKFLOW_STAGES.size(); i++) {
-            StageDefinition def = WORKFLOW_STAGES.get(i);
-            for (String match : def.matchingStatuses()) {
-                if (match.equalsIgnoreCase(normalized)
-                        || match.replace(" ", "_").equalsIgnoreCase(normalized)
-                        || match.replace("_", " ").equalsIgnoreCase(normalized)) {
-                    return i;
-                }
+            if (WORKFLOW_STAGES.get(i).matchingStatuses().contains(clean)) {
+                return i;
             }
         }
         return 0;
     }
 
     public List<WorkflowPacketDTO> getWorkflowPackets(String username, String role) {
+        return getWorkflowPackets(username, role, null);
+    }
+
+    public List<WorkflowPacketDTO> getWorkflowPackets(String username, String role, String cycleId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
 
         String userRole = user.getRole() != null ? user.getRole().name() : (role != null ? role : "ROLE_ADMIN");
 
@@ -78,6 +85,12 @@ public class WorkflowService {
                     packets = List.of();
         }
 
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
+
         return packets.stream()
                 .map(this::toWorkflowDTO)
                 .collect(Collectors.toList());
@@ -88,10 +101,9 @@ public class WorkflowService {
         int currentStageIndex = getStageIndexForStatus(currentStatus);
 
         boolean isPacketCompleted = "COMPLETED".equalsIgnoreCase(currentStatus)
-                || "MARKING COMPLETE".equalsIgnoreCase(currentStatus)
-                || "MARKING_COMPLETE".equalsIgnoreCase(currentStatus)
                 || "COMPLETE".equalsIgnoreCase(currentStatus)
-                || "FINALIZED".equalsIgnoreCase(currentStatus);
+                || "FINALIZED".equalsIgnoreCase(currentStatus)
+                || "DONE".equalsIgnoreCase(currentStatus);
 
         int totalStages = WORKFLOW_STAGES.size();
         int currentStage = isPacketCompleted ? totalStages : (currentStageIndex + 1);
@@ -136,14 +148,19 @@ public class WorkflowService {
             ));
         }
 
-        return new WorkflowPacketDTO(
-                packetIdStr,
-                p.getCourse() != null ? p.getCourse().getCourseCode() : "N/A",
-                p.getCourse() != null ? p.getCourse().getCourseName() : "N/A",
-                currentStatus,
-                currentStage,
-                totalStages,
-                stages
-        );
+        return WorkflowPacketDTO.builder()
+                .id(p.getPacketId())
+                .packetId(packetIdStr)
+                .courseCode(p.getCourse() != null ? p.getCourse().getCourseCode() : "N/A")
+                .courseName(p.getCourse() != null ? p.getCourse().getCourseName() : "N/A")
+                .status(currentStatus)
+                .currentStage(currentStage)
+                .totalStages(totalStages)
+                .lecturerUsername(p.getLecturer() != null ? p.getLecturer().getUsername() : null)
+                .lecturerName(p.getLecturer() != null ? p.getLecturer().getFullName() : null)
+                .moderatorUsername(p.getModerator() != null ? p.getModerator().getUsername() : null)
+                .moderatorName(p.getModerator() != null ? p.getModerator().getFullName() : null)
+                .stages(stages)
+                .build();
     }
 }

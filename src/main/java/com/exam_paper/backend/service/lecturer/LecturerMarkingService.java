@@ -36,7 +36,7 @@ public class LecturerMarkingService {
     }
 
     @Transactional
-    public String addMarkingScripts(AddMarkingRequestDTO request) {
+    public MarkingResponseDTO addMarkingScripts(AddMarkingRequestDTO request) {
         if (request == null) {
             throw new RuntimeException("Request cannot be null");
         }
@@ -45,9 +45,6 @@ public class LecturerMarkingService {
         }
         if (request.getLecturerId() == null || request.getLecturerId().isBlank()) {
             throw new RuntimeException("Lecturer ID is required");
-        }
-        if (request.getTotalScripts() == null || request.getTotalScripts() <= 0) {
-            throw new RuntimeException("Total scripts must be greater than 0");
         }
 
         Long pId = parseId(request.getPacketId());
@@ -58,46 +55,98 @@ public class LecturerMarkingService {
         User lecturer = (lId != null ? userRepository.findById(lId) : userRepository.findByUsername(request.getLecturerId()))
                 .orElseThrow(() -> new RuntimeException("Lecturer not found: " + request.getLecturerId()));
 
-        if (packet.getLecturer() != null && !packet.getLecturer().getUserId().equals(lecturer.getUserId())) {
+        if (packet.getLecturer() != null && !packet.getLecturer().getUserId().equals(lecturer.getUserId())
+                && lecturer.getRole() != User.Role.ROLE_ADMIN && lecturer.getRole() != User.Role.ROLE_SYSTEM_ADMIN) {
             throw new IllegalArgumentException("Only the designated course lecturer can add or update marking scripts for this exam packet.");
         }
 
         Optional<Marking> existingMarking = markingRepository.findByPacketPacketId(packet.getPacketId());
         Marking marking;
 
+        Integer effectiveTotal = request.getTotalScripts();
+        if (effectiveTotal == null || effectiveTotal <= 0) {
+            if (existingMarking.isPresent() && existingMarking.get().getTotalScripts() != null && existingMarking.get().getTotalScripts() > 0) {
+                effectiveTotal = existingMarking.get().getTotalScripts();
+            } else if (packet.getNumberOfCopies() != null && packet.getNumberOfCopies() > 0) {
+                effectiveTotal = packet.getNumberOfCopies();
+            } else {
+                effectiveTotal = 50;
+            }
+        }
+
+        Integer effectiveMarked = request.getMarkedScripts();
+        if (effectiveMarked == null) {
+            effectiveMarked = existingMarking.map(m -> m.getMarkedScripts() != null ? m.getMarkedScripts() : 0).orElse(0);
+        }
+
+        if (effectiveMarked < 0) {
+            throw new IllegalArgumentException("Marked scripts cannot be negative.");
+        }
+        if (effectiveMarked > effectiveTotal) {
+            throw new IllegalArgumentException("Marked scripts (" + effectiveMarked + ") cannot exceed total copies (" + effectiveTotal + ").");
+        }
+
         if (existingMarking.isPresent()) {
             marking = existingMarking.get();
             marking.setLecturer(lecturer);
-            marking.setTotalScripts(request.getTotalScripts());
+            marking.setTotalScripts(effectiveTotal);
+            marking.setMarkedScripts(effectiveMarked);
         } else {
             marking = Marking.builder()
                     .markingId("MK" + UUID.randomUUID().toString().substring(0, 8))
                     .packet(packet)
                     .lecturer(lecturer)
-                    .totalScripts(request.getTotalScripts())
-                    .markedScripts(0)
+                    .totalScripts(effectiveTotal)
+                    .markedScripts(effectiveMarked)
                     .build();
         }
 
+        packet.setNumberOfCopies(effectiveTotal);
+        examPacketRepository.save(packet);
         markingRepository.save(marking);
-        return "Total number of answer scripts added successfully";
+
+        int remaining = Math.max(0, effectiveTotal - effectiveMarked);
+        double progress = effectiveTotal > 0 ? ((double) effectiveMarked / effectiveTotal) * 100.0 : 0.0;
+
+        return MarkingResponseDTO.builder()
+                .packetId(String.valueOf(packet.getPacketId()))
+                .totalScripts(effectiveTotal)
+                .markedScripts(effectiveMarked)
+                .remainingScripts(remaining)
+                .progress(Math.round(progress * 10.0) / 10.0)
+                .build();
     }
 
     public MarkingResponseDTO getMarkingByPacketId(String packetId) {
         Long pId = parseId(packetId);
         if (pId == null) {
-            return new MarkingResponseDTO(packetId, 0);
+            return new MarkingResponseDTO(packetId, 50, 0, 50, 0.0);
         }
+
+        ExamPacket packet = examPacketRepository.findById(pId).orElse(null);
+        int totalScripts = packet != null && packet.getNumberOfCopies() != null ? packet.getNumberOfCopies() : 50;
+        int markedScripts = 0;
 
         Marking marking = markingRepository.findByPacketPacketId(pId).orElse(null);
-        if (marking == null) {
-            return new MarkingResponseDTO(packetId, 0);
+        if (marking != null) {
+            if (marking.getTotalScripts() != null && marking.getTotalScripts() > 0) {
+                totalScripts = marking.getTotalScripts();
+            }
+            if (marking.getMarkedScripts() != null) {
+                markedScripts = marking.getMarkedScripts();
+            }
         }
 
-        return new MarkingResponseDTO(
-                String.valueOf(marking.getPacket().getPacketId()),
-                marking.getTotalScripts()
-        );
+        int remaining = Math.max(0, totalScripts - markedScripts);
+        double progress = totalScripts > 0 ? ((double) markedScripts / totalScripts) * 100.0 : 0.0;
+
+        return MarkingResponseDTO.builder()
+                .packetId(packetId)
+                .totalScripts(totalScripts)
+                .markedScripts(markedScripts)
+                .remainingScripts(remaining)
+                .progress(Math.round(progress * 10.0) / 10.0)
+                .build();
     }
 
     public List<LecturerMarkingProcessDTO> getMarkingProcess(String lecturerId) {

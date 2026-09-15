@@ -16,10 +16,23 @@ public class LecturerTaskService {
 
     private final PacketAssignmentRepository packetAssignmentRepository;
     private final ExamPacketRepository examPacketRepository;
+    private final PacketRepository packetRepository;
     private final MarkingRepository markingRepository;
     private final PrintingScheduleRepository printingScheduleRepository;
     private final PacketStatusRepository packetStatusRepository;
     private final UserRepository userRepository;
+
+    private String cleanCycleId(String cycleId) {
+        if (cycleId == null) return null;
+        String trimmed = cycleId.trim();
+        if (trimmed.isEmpty() || "null".equalsIgnoreCase(trimmed) || "undefined".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+        if (trimmed.contains(",")) {
+            trimmed = trimmed.split(",")[0].trim();
+        }
+        return trimmed;
+    }
 
     private Long parseId(String str) {
         if (str == null) return null;
@@ -30,19 +43,40 @@ public class LecturerTaskService {
         }
     }
 
-    private Set<ExamPacket> getPacketsForLecturer(String lecturerId) {
-        Long lId = parseId(lecturerId);
-        if (lId == null) {
+    public Set<ExamPacket> getPacketsForLecturer(String lecturerId) {
+        return getPacketsForLecturer(lecturerId, null);
+    }
+
+    public Set<ExamPacket> getPacketsForLecturer(String lecturerId, String cycleId) {
+        Long lId = null;
+        if (lecturerId != null && !lecturerId.isBlank()) {
             User user = userRepository.findByUsername(lecturerId).orElse(null);
-            if (user != null) lId = user.getUserId();
+            if (user != null) {
+                lId = user.getUserId();
+            } else {
+                lId = parseId(lecturerId);
+            }
         }
+
         Set<ExamPacket> packets = new HashSet<>();
         if (lId != null) {
+            String cleanedCycleId = cleanCycleId(cycleId);
+            boolean isAllCycles = "ALL".equalsIgnoreCase(cleanedCycleId);
+
+            if (cleanedCycleId != null && !isAllCycles) {
+                packets.addAll(packetRepository.findByLecturerOrModeratorIdAndCycleId(lId, cleanedCycleId));
+            } else {
+                packets.addAll(packetRepository.findByLecturerOrModeratorId(lId));
+            }
+
             List<PacketAssignment> assignments = packetAssignmentRepository.findByUserUserId(lId);
             for (PacketAssignment a : assignments) {
-                if (a.getPacket() != null) packets.add(a.getPacket());
+                if (a.getPacket() != null) {
+                    if (cleanedCycleId == null || isAllCycles || (a.getPacket().getAcademicCycle() != null && cleanedCycleId.equalsIgnoreCase(a.getPacket().getAcademicCycle().getCycleId()))) {
+                        packets.add(a.getPacket());
+                    }
+                }
             }
-            packets.addAll(examPacketRepository.findByLecturerUserId(lId));
         }
         return packets;
     }
@@ -122,20 +156,39 @@ public class LecturerTaskService {
     }
 
     public List<LecturerDeadlineCalendarDTO> getDeadlineCalendar(String lecturerId) {
-        Set<ExamPacket> packets = getPacketsForLecturer(lecturerId);
+        return getDeadlineCalendar(lecturerId, null);
+    }
+
+    public List<LecturerDeadlineCalendarDTO> getDeadlineCalendar(String lecturerId, String cycleId) {
+        Set<ExamPacket> packets = getPacketsForLecturer(lecturerId, cycleId);
         List<LecturerDeadlineCalendarDTO> deadlines = new ArrayList<>();
-        LocalDate today = LocalDate.now();
 
         for (ExamPacket packet : packets) {
-            if (packet.getDeadline() == null || packet.getCourse() == null) continue;
-            if (packet.getDeadline().isBefore(today)) continue;
+            if (packet.getCourse() == null) continue;
+
+            LocalDate deadline = packet.getDeadline();
+            if (deadline == null && packet.getModerationDeadline() != null) {
+                deadline = packet.getModerationDeadline();
+            }
+            if (deadline == null) continue;
+
+            String status = packet.getStatus() != null ? packet.getStatus().getStatusName() : "PENDING";
+
+            // Exclude already finalized packets from upcoming deadlines
+            if ("COMPLETED".equalsIgnoreCase(status) || "MARKING COMPLETE".equalsIgnoreCase(status) || "MARKING_COMPLETE".equalsIgnoreCase(status)) {
+                continue;
+            }
+
+            String packetIdStr = String.format("PKT-%d-%03d",
+                    packet.getDeadline() != null ? packet.getDeadline().getYear() : 2026,
+                    packet.getPacketId());
 
             deadlines.add(new LecturerDeadlineCalendarDTO(
-                    String.valueOf(packet.getPacketId()),
+                    packetIdStr,
                     packet.getCourse().getCourseCode(),
                     packet.getCourse().getCourseName(),
-                    packet.getDeadline(),
-                    packet.getStatus() != null ? packet.getStatus().getStatusName() : "PENDING"
+                    deadline,
+                    status
             ));
         }
 
