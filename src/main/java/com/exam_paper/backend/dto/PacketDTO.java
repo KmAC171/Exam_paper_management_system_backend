@@ -26,6 +26,12 @@ public class PacketDTO {
     private boolean overdue;
     private String status;
     private String priority;
+    private String cycleId;
+    private String cycleName;
+    private Integer numberOfCopies;
+    private Integer totalScripts;
+    private Integer markedScripts;
+    private Double markingProgress;
 
     // Backward-compatible constructor for existing tests
     public PacketDTO(Long id, String packetId, String courseCode, String courseName,

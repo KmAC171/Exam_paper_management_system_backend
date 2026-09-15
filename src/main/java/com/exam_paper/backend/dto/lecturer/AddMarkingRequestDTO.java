@@ -11,4 +11,5 @@ public class AddMarkingRequestDTO {
     private String packetId;
     private String lecturerId;
     private Integer totalScripts;
+    private Integer markedScripts;
 }
