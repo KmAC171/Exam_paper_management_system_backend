@@ -32,4 +32,23 @@ public class HodWorkloadDTO {
     private int totalScripts;
     private int markedScripts;
     private int progressPercentage;
+
+    private List<LecturerCourseWorkloadDTO> courseBreakdown;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LecturerCourseWorkloadDTO {
+        private String packetId;
+        private Long id;
+        private String courseCode;
+        private String courseName;
+        private String status;
+        private String roleOnPacket;
+        private int numberOfCopies;
+        private int markedScripts;
+        private double markingProgress;
+        private String deadline;
+    }
 }

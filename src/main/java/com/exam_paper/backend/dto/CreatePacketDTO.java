@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 @Data
 public class CreatePacketDTO {
+    private String cycleId;
     private Long courseId;
     private Long lecturerId;
     private Long moderatorId;
@@ -17,4 +18,5 @@ public class CreatePacketDTO {
     private String questions;
     private String format;
     private String moderatorNote;
-}
+    private Integer numberOfCopies;
+}

@@ -28,6 +28,8 @@ public class PacketDetailDTO {
     private String status;
     private String priority;
     private boolean overdue;
+    private String cycleId;
+    private String cycleName;
 
     // exam details
     private String duration;
@@ -35,4 +37,8 @@ public class PacketDetailDTO {
     private String questions;
     private String format;
     private String moderatorNote;
+    private Integer numberOfCopies;
+    private Integer totalScripts;
+    private Integer markedScripts;
+    private Double markingProgress;
 }
