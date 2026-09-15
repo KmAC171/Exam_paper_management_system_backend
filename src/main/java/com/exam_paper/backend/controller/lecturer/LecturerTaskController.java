@@ -29,8 +29,14 @@ public class LecturerTaskController {
     }
 
     @GetMapping("/{lecturerId}/deadline-calendar")
-    public ResponseEntity<List<LecturerDeadlineCalendarDTO>> getDeadlineCalendar(@PathVariable String lecturerId) {
-        List<LecturerDeadlineCalendarDTO> deadlineCalendar = lecturerTaskService.getDeadlineCalendar(lecturerId);
+    public ResponseEntity<List<LecturerDeadlineCalendarDTO>> getDeadlineCalendar(
+            @PathVariable String lecturerId,
+            @RequestParam(value = "cycleId", required = false) String cycleId,
+            org.springframework.security.core.Authentication authentication) {
+        String effectiveUser = (authentication != null && authentication.getName() != null && !authentication.getName().isBlank())
+                ? authentication.getName()
+                : lecturerId;
+        List<LecturerDeadlineCalendarDTO> deadlineCalendar = lecturerTaskService.getDeadlineCalendar(effectiveUser, cycleId);
         return ResponseEntity.ok(deadlineCalendar);
     }
 

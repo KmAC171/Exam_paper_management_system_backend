@@ -16,10 +16,12 @@ public class WorkflowController {
     private final WorkflowService workflowService;
 
     @GetMapping
-    public List<WorkflowPacketDTO> getWorkflow(Authentication authentication) {
+    public List<WorkflowPacketDTO> getWorkflow(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication.getName();
         String role = authentication.getAuthorities()
                 .iterator().next().getAuthority();
-        return workflowService.getWorkflowPackets(username, role);
+        return workflowService.getWorkflowPackets(username, role, cycleId);
     }
 }

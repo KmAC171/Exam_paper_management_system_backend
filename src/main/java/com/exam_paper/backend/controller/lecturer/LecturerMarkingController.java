@@ -19,8 +19,8 @@ public class LecturerMarkingController {
     private final LecturerMarkingService lecturerMarkingService;
 
     @PostMapping("/marking")
-    public ResponseEntity<String> addMarkingScripts(@RequestBody AddMarkingRequestDTO request) {
-        String response = lecturerMarkingService.addMarkingScripts(request);
+    public ResponseEntity<MarkingResponseDTO> addMarkingScripts(@RequestBody AddMarkingRequestDTO request) {
+        MarkingResponseDTO response = lecturerMarkingService.addMarkingScripts(request);
         return ResponseEntity.ok(response);
     }
 
