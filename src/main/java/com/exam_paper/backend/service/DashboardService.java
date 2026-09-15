@@ -18,6 +18,7 @@ public class DashboardService {
 
     private final ExamPacketRepository examPacketRepository;
     private final ActivityLogService activityLogService;
+    private final PacketService packetService;
 
     private static final String[] MONTH_NAMES = {
             "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -25,9 +26,23 @@ public class DashboardService {
     };
 
     public DashboardResponseDTO getDashboard() {
+        return getDashboard(null);
+    }
+
+    public DashboardResponseDTO getDashboard(String cycleId) {
         LocalDate today = LocalDate.now();
 
-        List<ExamPacket> allPackets = examPacketRepository.findAll();
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
+
+        List<ExamPacket> allPackets;
+        if (effectiveCycleId != null) {
+            allPackets = examPacketRepository.findByAcademicCycle_CycleId(effectiveCycleId);
+        } else {
+            allPackets = examPacketRepository.findAll();
+        }
         long total = allPackets.size();
 
         long pending = 0;
@@ -95,33 +110,38 @@ public class DashboardService {
 
         // Department stats
         List<DepartmentStatsDto> departmentStats = examPacketRepository
-                .getDepartmentStats(today)
+                .getDepartmentStatsByCycle(today, effectiveCycleId)
                 .stream()
+                .filter(p -> p != null)
                 .map(p -> new DepartmentStatsDto(
-                        p.getDepartmentName(),
-                        p.getSubmitted(),
-                        p.getApproved(),
-                        p.getDelayed()
+                        p.getDepartmentName() != null ? p.getDepartmentName() : "Unknown",
+                        p.getSubmitted() != null ? p.getSubmitted() : 0L,
+                        p.getApproved() != null ? p.getApproved() : 0L,
+                        p.getDelayed() != null ? p.getDelayed() : 0L
                 ))
                 .collect(Collectors.toList());
 
         // Submission trend
         List<SubmissionTrendDTO> submissionTrend = examPacketRepository
-                .getSubmissionTrend()
+                .getSubmissionTrendByCycle(effectiveCycleId)
                 .stream()
-                .map(p -> new SubmissionTrendDTO(
-                        MONTH_NAMES[p.getMonth()],
-                        p.getCount()
-                ))
+                .filter(p -> p != null && p.getMonth() != null)
+                .map(p -> {
+                    int m = p.getMonth();
+                    String monthName = (m >= 1 && m <= 12) ? MONTH_NAMES[m] : "Other";
+                    long cnt = p.getCount() != null ? p.getCount() : 0L;
+                    return new SubmissionTrendDTO(monthName, cnt);
+                })
                 .collect(Collectors.toList());
 
         // Recent activity
         List<ActivityLogDTO> recentActivity = activityLogService.getRecentActivity()
                 .stream()
+                .filter(log -> log != null)
                 .map(log -> new ActivityLogDTO(
-                        log.getMessage(),
-                        log.getActorInitials(),
-                        log.getActorColor(),
+                        log.getMessage() != null ? log.getMessage() : "System Activity",
+                        log.getActorInitials() != null ? log.getActorInitials() : "SYS",
+                        log.getActorColor() != null ? log.getActorColor() : "bg-indigo-600",
                         timeAgo(log.getCreatedAt())
                 ))
                 .collect(Collectors.toList());
@@ -137,6 +157,7 @@ public class DashboardService {
     }
 
     private String timeAgo(LocalDateTime dateTime) {
+        if (dateTime == null) return "recently";
         LocalDateTime now = LocalDateTime.now();
         long minutes = ChronoUnit.MINUTES.between(dateTime, now);
         if (minutes < 1) return "just now";

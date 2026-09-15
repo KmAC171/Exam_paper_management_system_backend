@@ -28,14 +28,29 @@ public class ModeratorDashboardService {
     private final PacketRepository packetRepository;
     private final UserRepository userRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final PacketService packetService;
 
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d", Locale.ENGLISH);
 
     public ModeratorDashboardResponseDTO getModeratorDashboard(String username) {
+        return getModeratorDashboard(username, null);
+    }
+
+    public ModeratorDashboardResponseDTO getModeratorDashboard(String username, String cycleId) {
         User moderator = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Moderator not found with username: " + username));
 
-        List<ExamPacket> assignedPackets = packetRepository.findByModeratorId(moderator.getUserId());
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
+
+        List<ExamPacket> assignedPackets;
+        if (effectiveCycleId != null) {
+            assignedPackets = packetRepository.findByModeratorIdAndCycleId(moderator.getUserId(), effectiveCycleId);
+        } else {
+            assignedPackets = packetRepository.findByModeratorId(moderator.getUserId());
+        }
 
         LocalDate today = LocalDate.now();
 
@@ -52,8 +67,8 @@ public class ModeratorDashboardService {
             boolean isOverdue = deadline != null && deadline.isBefore(today);
 
             boolean isApproved = "APPROVED".equalsIgnoreCase(statusName) || "COMPLETED".equalsIgnoreCase(statusName) || "PRINTING_QUEUE".equalsIgnoreCase(statusName);
-            boolean isReturned = "PENDING".equalsIgnoreCase(statusName) && p.getModeratorNote() != null && !p.getModeratorNote().trim().isEmpty();
-            boolean isPending = "UNDER_MODERATION".equalsIgnoreCase(statusName) || ("PENDING".equalsIgnoreCase(statusName) && !isReturned);
+            boolean isReturned = "REJECTED".equalsIgnoreCase(statusName) || ("PENDING".equalsIgnoreCase(statusName) && p.getModeratorNote() != null && !p.getModeratorNote().trim().isEmpty());
+            boolean isPending = "SUBMITTED".equalsIgnoreCase(statusName) || "UNDER_MODERATION".equalsIgnoreCase(statusName) || "SECOND_MARKING".equalsIgnoreCase(statusName) || ("PENDING".equalsIgnoreCase(statusName) && !isReturned);
 
             if (isApproved) {
                 approvedToday++;

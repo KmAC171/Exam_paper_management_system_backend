@@ -42,7 +42,15 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public HodDashboardDTO getDepartmentDashboard(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentDashboard(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public HodDashboardDTO getDepartmentDashboard(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
 
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
@@ -56,6 +64,12 @@ public class HodService {
         }
 
         List<ExamPacket> packets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
+
         LocalDate today = LocalDate.now();
 
         long totalPackets = packets.size();
@@ -97,8 +111,10 @@ public class HodService {
                 .map(packetService::toDTO)
                 .collect(Collectors.toList());
 
-        List<ActivityLogDTO> recentActivities = activityLogService.getRecentActivity().stream()
-                .limit(6)
+        List<ActivityLogDTO> recentActivities = activityLogService.getRecentActivity()
+                .stream()
+                .filter(log -> log.getMessage() != null && dept.getDepartmentName() != null && log.getMessage().contains(dept.getDepartmentName()))
+                .limit(8)
                 .map(log -> new ActivityLogDTO(
                         log.getMessage(),
                         log.getActorInitials(),
@@ -134,13 +150,27 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public List<PacketDTO> getDepartmentPackets(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentPackets(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PacketDTO> getDepartmentPackets(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
             return List.of();
         }
 
         List<ExamPacket> packets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
+
         return packets.stream()
                 .map(packetService::toDTO)
                 .collect(Collectors.toList());
@@ -148,7 +178,15 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public List<HodWorkloadDTO> getDepartmentWorkload(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentWorkload(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HodWorkloadDTO> getDepartmentWorkload(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
             return List.of();
@@ -156,6 +194,11 @@ public class HodService {
 
         List<User> deptUsers = userRepository.findByDepartment_DepartmentId(dept.getDepartmentId());
         List<ExamPacket> deptPackets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            deptPackets = deptPackets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
         LocalDate today = LocalDate.now();
 
         // Also include any users who are assigned as lecturer or moderator in this department's packets
@@ -199,6 +242,10 @@ public class HodService {
             long rejected = 0;
             long overdue = 0;
 
+            int totalScripts = 0;
+            int markedScripts = 0;
+            List<HodWorkloadDTO.LecturerCourseWorkloadDTO> courseBreakdown = new ArrayList<>();
+
             for (ExamPacket p : allAssigned) {
                 String status = p.getStatus() != null ? p.getStatus().getStatusName().toUpperCase() : "PENDING";
                 boolean isOverdue = p.getDeadline() != null && p.getDeadline().isBefore(today) && !status.equals("COMPLETED");
@@ -214,14 +261,45 @@ public class HodService {
                     case "REJECTED" -> rejected++;
                     default -> pending++;
                 }
+
+                int copies = p.getNumberOfCopies() != null && p.getNumberOfCopies() > 0 ? p.getNumberOfCopies() : 50;
+                int marked = 0;
+                if (p.getMarking() != null) {
+                    if (p.getMarking().getTotalScripts() != null && p.getMarking().getTotalScripts() > 0) {
+                        copies = p.getMarking().getTotalScripts();
+                    }
+                    if (p.getMarking().getMarkedScripts() != null) {
+                        marked = p.getMarking().getMarkedScripts();
+                    }
+                }
+
+                totalScripts += copies;
+                markedScripts += marked;
+
+                boolean isAuthor = p.getLecturer() != null && p.getLecturer().getUserId().equals(staff.getUserId());
+                double courseProg = copies > 0 ? ((double) marked / copies) * 100.0 : 0.0;
+                String pktCode = String.format("PKT-%d-%03d",
+                        p.getDeadline() != null ? p.getDeadline().getYear() : today.getYear(),
+                        p.getPacketId());
+
+                courseBreakdown.add(HodWorkloadDTO.LecturerCourseWorkloadDTO.builder()
+                        .packetId(pktCode)
+                        .id(p.getPacketId())
+                        .courseCode(p.getCourse() != null ? p.getCourse().getCourseCode() : "N/A")
+                        .courseName(p.getCourse() != null ? p.getCourse().getCourseName() : "N/A")
+                        .status(p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING")
+                        .roleOnPacket(isAuthor ? "Author (Lecturer)" : "Moderator")
+                        .numberOfCopies(copies)
+                        .markedScripts(marked)
+                        .markingProgress(Math.round(courseProg * 10.0) / 10.0)
+                        .deadline(p.getDeadline() != null ? p.getDeadline().toString() : "N/A")
+                        .build());
             }
 
             int totalAssigned = allAssigned.size();
-            int totalScripts = totalAssigned * 45; // Standard cohort script estimate
-            int markedScripts = (int) (completed * 45 + approved * 35 + printing * 40 + submitted * 20 + draft * 10);
-            int progressPercentage = totalAssigned > 0
-                    ? (int) Math.round(((completed * 100.0) + (approved * 85.0) + (printing * 95.0) + (submitted * 50.0) + (draft * 25.0)) / (totalAssigned * 100.0) * 100)
-                    : 0;
+            int progressPercentage = totalScripts > 0
+                    ? (int) Math.round(((double) markedScripts / totalScripts) * 100.0)
+                    : (totalAssigned > 0 ? (int) Math.round(((completed * 100.0) + (approved * 85.0) + (printing * 95.0) + (submitted * 50.0) + (draft * 25.0)) / (totalAssigned * 100.0) * 100) : 0);
 
             if (progressPercentage > 100) progressPercentage = 100;
 
@@ -244,6 +322,7 @@ public class HodService {
                     .totalScripts(totalScripts)
                     .markedScripts(markedScripts)
                     .progressPercentage(progressPercentage)
+                    .courseBreakdown(courseBreakdown)
                     .build());
         }
 
@@ -252,7 +331,15 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public List<PacketDTO> getDepartmentOverdue(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentOverdue(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PacketDTO> getDepartmentOverdue(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
             return List.of();
@@ -260,6 +347,11 @@ public class HodService {
 
         LocalDate today = LocalDate.now();
         List<ExamPacket> packets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
 
         return packets.stream()
                 .filter(p -> {
@@ -272,13 +364,26 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public List<PacketDTO> getDepartmentPreviousRecords(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentPreviousRecords(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PacketDTO> getDepartmentPreviousRecords(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
             return List.of();
         }
 
         List<ExamPacket> packets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
 
         return packets.stream()
                 .filter(p -> {
@@ -291,7 +396,15 @@ public class HodService {
 
     @Transactional(readOnly = true)
     public HodReportDTO getDepartmentReport(String username, Long deptIdOptional) {
-        packetService.syncMissingPacketsForCourses();
+        return getDepartmentReport(username, deptIdOptional, null);
+    }
+
+    @Transactional(readOnly = true)
+    public HodReportDTO getDepartmentReport(String username, Long deptIdOptional, String cycleId) {
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        packetService.syncMissingPacketsForCycle(effectiveCycleId);
         Department dept = resolveDepartment(username, deptIdOptional);
         if (dept == null) {
             return HodReportDTO.builder()
@@ -301,6 +414,11 @@ public class HodService {
         }
 
         List<ExamPacket> packets = packetRepository.findByDepartmentIdWithDetails(dept.getDepartmentId());
+        if (effectiveCycleId != null) {
+            packets = packets.stream()
+                    .filter(p -> p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
         LocalDate today = LocalDate.now();
 
         long total = packets.size();

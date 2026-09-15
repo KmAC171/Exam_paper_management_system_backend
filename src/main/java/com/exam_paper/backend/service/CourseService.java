@@ -30,6 +30,7 @@ public class CourseService {
     private final ActivityLogService activityLogService;
     private final PacketService packetService;
     private final NotificationService notificationService;
+    private final AcademicCycleService academicCycleService;
 
     @Transactional(readOnly = true)
     public CoursePageResponseDTO getCourses(String username, String role) {
@@ -162,6 +163,7 @@ public class CourseService {
                 .orElse(null);
 
         ExamPacket packet = new ExamPacket();
+        packet.setAcademicCycle(academicCycleService.getActiveCycleEntity());
         packet.setCourse(saved);
         packet.setLecturer(saved.getLecturer());
         packet.setModerator(saved.getModerator());
@@ -293,6 +295,7 @@ public class CourseService {
                     .orElse(null);
 
             ExamPacket newPacket = new ExamPacket();
+            newPacket.setAcademicCycle(academicCycleService.getActiveCycleEntity());
             newPacket.setCourse(saved);
             newPacket.setLecturer(saved.getLecturer());
             newPacket.setModerator(saved.getModerator());
