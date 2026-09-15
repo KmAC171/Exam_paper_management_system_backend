@@ -9,6 +9,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Course {
 
     @Id
@@ -32,4 +33,8 @@ public class Course {
     @ManyToOne
     @JoinColumn(name = "moderator_id")
     private User moderator;
-}
+
+    @Column(name = "default_semester")
+    @Builder.Default
+    private Integer defaultSemester = 1; // 1 = Semester 1, 2 = Semester 2, 3 = Both
+}
