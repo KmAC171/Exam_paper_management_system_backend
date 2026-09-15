@@ -14,15 +14,47 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     List<ExamPacket> findByLecturerUserId(Long lecturerId);
     long countByStatus_StatusName(String statusName);
 
-    @Query("SELECT COUNT(p) FROM ExamPacket p " + "WHERE p.status.statusName = 'PENDING'AND p.deadline < :today ")
+    @Query("SELECT COUNT(p) FROM ExamPacket p WHERE p.status.statusName = 'PENDING' AND p.deadline < :today")
     long countDelayed(@Param("today") LocalDate today);
+
+    @Query("SELECT p FROM ExamPacket p WHERE p.academicCycle IS NULL")
+    List<ExamPacket> findPacketsWithoutCycle();
+
+    List<ExamPacket> findByAcademicCycle_CycleId(String cycleId);
 
     @Query(value = """
     SELECT 
         d.department_name AS departmentName,
         COUNT(p.packet_id) AS submitted,
-        SUM(CASE WHEN ps.status_name = 'APPROVED' THEN 1 ELSE 0 END) AS approved,
-        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < :today THEN 1 ELSE 0 END) AS `delayed`
+        COALESCE(SUM(CASE WHEN ps.status_name = 'APPROVED' THEN 1 ELSE 0 END), 0) AS approved,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < :today THEN 1 ELSE 0 END), 0) AS `delayed`
+    FROM exam_packets p
+    JOIN courses c ON p.course_id = c.course_id
+    JOIN departments d ON c.department_id = d.department_id
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE (:cycleId IS NULL OR p.cycle_id = :cycleId)
+    GROUP BY d.department_id, d.department_name
+    """, nativeQuery = true)
+    List<DepartmentStatsProjection> getDepartmentStatsByCycle(@Param("today") LocalDate today, @Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT 
+        MONTH(p.deadline) AS month,
+        COUNT(*) AS count
+    FROM exam_packets p
+    WHERE (:cycleId IS NULL OR p.cycle_id = :cycleId)
+      AND p.deadline IS NOT NULL
+    GROUP BY MONTH(p.deadline)
+    ORDER BY MONTH(p.deadline)
+    """, nativeQuery = true)
+    List<SubmissionTrendProjection> getSubmissionTrendByCycle(@Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT 
+        d.department_name AS departmentName,
+        COUNT(p.packet_id) AS submitted,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'APPROVED' THEN 1 ELSE 0 END), 0) AS approved,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < :today THEN 1 ELSE 0 END), 0) AS `delayed`
     FROM exam_packets p
     JOIN courses c ON p.course_id = c.course_id
     JOIN departments d ON c.department_id = d.department_id
@@ -37,6 +69,7 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
         COUNT(*) AS count
     FROM exam_packets p
     WHERE YEAR(p.deadline) = YEAR(CURDATE())
+      AND p.deadline IS NOT NULL
     GROUP BY MONTH(p.deadline)
     ORDER BY MONTH(p.deadline)
     """, nativeQuery = true)
@@ -47,11 +80,12 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     SELECT
         MONTH(p.deadline) AS month,
         COUNT(*) AS submitted,
-        SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END) AS approved,
-        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+        COALESCE(SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS approved,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE() THEN 1 ELSE 0 END), 0) AS `delayed`
     FROM exam_packets p
     JOIN packet_status ps ON p.status_id = ps.status_id
     WHERE YEAR(p.deadline) = YEAR(CURDATE())
+      AND p.deadline IS NOT NULL
     GROUP BY MONTH(p.deadline)
     ORDER BY MONTH(p.deadline)
     """, nativeQuery = true)
@@ -62,8 +96,8 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     SELECT
         d.department_name AS departmentName,
         COUNT(p.packet_id) AS totalPackets,
-        SUM(CASE WHEN ps.status_name != 'PENDING' OR p.deadline >= CURDATE() THEN 1 ELSE 0 END) AS onTime,
-        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+        COALESCE(SUM(CASE WHEN ps.status_name != 'PENDING' OR (p.deadline IS NOT NULL AND p.deadline >= CURDATE()) OR p.deadline IS NULL THEN 1 ELSE 0 END), 0) AS onTime,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE() THEN 1 ELSE 0 END), 0) AS `delayed`
     FROM exam_packets p
     JOIN courses c ON p.course_id = c.course_id
     JOIN departments d ON c.department_id = d.department_id
@@ -77,13 +111,14 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     SELECT
         MONTH(p.deadline) AS month,
         COUNT(*) AS submitted,
-        SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END) AS approved,
-        SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline < CURDATE() THEN 1 ELSE 0 END) AS `delayed`
+        COALESCE(SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS approved,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE() THEN 1 ELSE 0 END), 0) AS `delayed`
     FROM exam_packets p
     JOIN packet_status ps ON p.status_id = ps.status_id
     WHERE YEAR(p.deadline) = YEAR(CURDATE())
-    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
-    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+      AND p.deadline IS NOT NULL
+      AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+      AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
     GROUP BY MONTH(p.deadline)
     ORDER BY MONTH(p.deadline)
     """, nativeQuery = true)
@@ -95,8 +130,9 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     @Query(value = """
     SELECT COUNT(*) FROM exam_packets p
     WHERE YEAR(p.deadline) = YEAR(CURDATE())
-    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
-    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+      AND p.deadline IS NOT NULL
+      AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+      AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
     """, nativeQuery = true)
     long countFiltered(
             @Param("startMonth") int startMonth,
@@ -106,9 +142,10 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     SELECT COUNT(*) FROM exam_packets p
     JOIN packet_status ps ON p.status_id = ps.status_id
     WHERE (ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED')
-    AND YEAR(p.deadline) = YEAR(CURDATE())
-    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
-    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+      AND YEAR(p.deadline) = YEAR(CURDATE())
+      AND p.deadline IS NOT NULL
+      AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+      AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
     """, nativeQuery = true)
     long countCompletedFiltered(
             @Param("startMonth") int startMonth,
@@ -117,13 +154,66 @@ public interface ExamPacketRepository extends JpaRepository<ExamPacket, Long> {
     @Query(value = """
     SELECT COUNT(*) FROM exam_packets p
     JOIN packet_status ps ON p.status_id = ps.status_id
-    WHERE ps.status_name = 'PENDING' AND p.deadline < CURDATE()
-    AND YEAR(p.deadline) = YEAR(CURDATE())
-    AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
-    AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
+    WHERE ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE()
+      AND YEAR(p.deadline) = YEAR(CURDATE())
+      AND (:startMonth = 0 OR MONTH(p.deadline) >= :startMonth)
+      AND (:endMonth = 0 OR MONTH(p.deadline) <= :endMonth)
     """, nativeQuery = true)
     long countDelayedFiltered(
             @Param("startMonth") int startMonth,
             @Param("endMonth") int endMonth);
 
+    // ── CYCLE-SPECIFIC REPORTING QUERIES ──
+
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    WHERE (:cycleId IS NULL OR p.cycle_id = :cycleId)
+    """, nativeQuery = true)
+    long countByCycle(@Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE (ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED')
+      AND (:cycleId IS NULL OR p.cycle_id = :cycleId)
+    """, nativeQuery = true)
+    long countCompletedByCycle(@Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT COUNT(*) FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE()
+      AND (:cycleId IS NULL OR p.cycle_id = :cycleId)
+    """, nativeQuery = true)
+    long countDelayedByCycle(@Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT
+        MONTH(p.deadline) AS month,
+        COUNT(*) AS submitted,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'APPROVED' OR ps.status_name = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS approved,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE() THEN 1 ELSE 0 END), 0) AS `delayed`
+    FROM exam_packets p
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE (:cycleId IS NULL OR p.cycle_id = :cycleId)
+      AND p.deadline IS NOT NULL
+    GROUP BY MONTH(p.deadline)
+    ORDER BY MONTH(p.deadline)
+    """, nativeQuery = true)
+    List<MonthlyTrendProjection> getMonthlyTrendByCycle(@Param("cycleId") String cycleId);
+
+    @Query(value = """
+    SELECT
+        d.department_name AS departmentName,
+        COUNT(p.packet_id) AS totalPackets,
+        COALESCE(SUM(CASE WHEN ps.status_name != 'PENDING' OR (p.deadline IS NOT NULL AND p.deadline >= CURDATE()) OR p.deadline IS NULL THEN 1 ELSE 0 END), 0) AS onTime,
+        COALESCE(SUM(CASE WHEN ps.status_name = 'PENDING' AND p.deadline IS NOT NULL AND p.deadline < CURDATE() THEN 1 ELSE 0 END), 0) AS `delayed`
+    FROM exam_packets p
+    JOIN courses c ON p.course_id = c.course_id
+    JOIN departments d ON c.department_id = d.department_id
+    JOIN packet_status ps ON p.status_id = ps.status_id
+    WHERE (:cycleId IS NULL OR p.cycle_id = :cycleId)
+    GROUP BY d.department_id, d.department_name
+    """, nativeQuery = true)
+    List<DepartmentReportProjection> getDepartmentReportByCycle(@Param("cycleId") String cycleId);
 }

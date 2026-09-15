@@ -11,4 +11,9 @@ import java.util.Optional;
 public interface AcademicCycleRepository extends JpaRepository<AcademicCycle, String> {
     Optional<AcademicCycle> findByCycleId(String cycleId);
     List<AcademicCycle> findByStatus(String status);
+    Optional<AcademicCycle> findFirstByStatusOrderByStartDateDesc(String status);
+    List<AcademicCycle> findAllByOrderByStartDateDesc();
+    List<AcademicCycle> findByAcademicYearOrderBySemesterAsc(String academicYear);
+    boolean existsByCycleId(String cycleId);
 }
+
