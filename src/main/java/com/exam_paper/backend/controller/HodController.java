@@ -24,98 +24,116 @@ public class HodController {
 
     // --- Statistics ---
     @GetMapping("/statistics")
-    public HodDashboardDTO getStatistics(Authentication authentication) {
+    public HodDashboardDTO getStatistics(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentDashboard(username, null);
+        return hodService.getDepartmentDashboard(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/statistics")
     public HodDashboardDTO getDepartmentStatistics(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentDashboard(username, parsedDeptId);
+        return hodService.getDepartmentDashboard(username, parsedDeptId, cycleId);
     }
 
     // --- Packets ---
     @GetMapping("/packets")
-    public List<PacketDTO> getPackets(Authentication authentication) {
+    public List<PacketDTO> getPackets(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentPackets(username, null);
+        return hodService.getDepartmentPackets(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/packets")
     public List<PacketDTO> getDepartmentPackets(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentPackets(username, parsedDeptId);
+        return hodService.getDepartmentPackets(username, parsedDeptId, cycleId);
     }
 
     // --- Workload ---
     @GetMapping("/workload")
-    public List<HodWorkloadDTO> getWorkload(Authentication authentication) {
+    public List<HodWorkloadDTO> getWorkload(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentWorkload(username, null);
+        return hodService.getDepartmentWorkload(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/workload")
     public List<HodWorkloadDTO> getDepartmentWorkload(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentWorkload(username, parsedDeptId);
+        return hodService.getDepartmentWorkload(username, parsedDeptId, cycleId);
     }
 
     // --- Overdue ---
     @GetMapping("/overdue")
-    public List<PacketDTO> getOverdue(Authentication authentication) {
+    public List<PacketDTO> getOverdue(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentOverdue(username, null);
+        return hodService.getDepartmentOverdue(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/overdue")
     public List<PacketDTO> getDepartmentOverdue(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentOverdue(username, parsedDeptId);
+        return hodService.getDepartmentOverdue(username, parsedDeptId, cycleId);
     }
 
     // --- Previous Records ---
     @GetMapping("/previous-records")
-    public List<PacketDTO> getPreviousRecords(Authentication authentication) {
+    public List<PacketDTO> getPreviousRecords(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentPreviousRecords(username, null);
+        return hodService.getDepartmentPreviousRecords(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/previous-records")
     public List<PacketDTO> getDepartmentPreviousRecords(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentPreviousRecords(username, parsedDeptId);
+        return hodService.getDepartmentPreviousRecords(username, parsedDeptId, cycleId);
     }
 
     // --- Reports ---
     @GetMapping("/report")
-    public HodReportDTO getReport(Authentication authentication) {
+    public HodReportDTO getReport(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
-        return hodService.getDepartmentReport(username, null);
+        return hodService.getDepartmentReport(username, null, cycleId);
     }
 
     @GetMapping("/department/{deptId}/report")
     public HodReportDTO getDepartmentReport(
             @PathVariable String deptId,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
         String username = authentication != null ? authentication.getName() : null;
         Long parsedDeptId = parseDeptId(deptId);
-        return hodService.getDepartmentReport(username, parsedDeptId);
+        return hodService.getDepartmentReport(username, parsedDeptId, cycleId);
     }
 
     // --- Export Report ---
