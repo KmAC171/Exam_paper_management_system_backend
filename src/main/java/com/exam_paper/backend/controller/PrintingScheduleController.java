@@ -34,14 +34,17 @@ public class PrintingScheduleController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String cycleId
     ) {
-        return ResponseEntity.ok(printingScheduleService.getAllSchedules(fromDate, toDate, status, departmentId));
+        return ResponseEntity.ok(printingScheduleService.getAllSchedules(fromDate, toDate, status, departmentId, cycleId));
     }
 
     @GetMapping("/my-schedules")
-    public ResponseEntity<List<PrintingScheduleResponseDTO>> getMySchedules(Authentication authentication) {
-        return ResponseEntity.ok(printingScheduleService.getMySchedules(authentication.getName()));
+    public ResponseEntity<List<PrintingScheduleResponseDTO>> getMySchedules(
+            Authentication authentication,
+            @RequestParam(required = false) String cycleId) {
+        return ResponseEntity.ok(printingScheduleService.getMySchedules(authentication.getName(), cycleId));
     }
 
     @GetMapping("/packet/{packetId}")
@@ -52,8 +55,8 @@ public class PrintingScheduleController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getPrintingStats() {
-        return ResponseEntity.ok(printingScheduleService.getPrintingStats());
+    public ResponseEntity<Map<String, Object>> getPrintingStats(@RequestParam(required = false) String cycleId) {
+        return ResponseEntity.ok(printingScheduleService.getPrintingStats(cycleId));
     }
 
     @PostMapping("/book")

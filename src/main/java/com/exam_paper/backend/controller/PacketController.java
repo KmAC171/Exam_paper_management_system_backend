@@ -22,10 +22,12 @@ public class PacketController {
     private final PacketService packetService;
 
     @GetMapping
-    public List<PacketDTO> getPackets(Authentication authentication) {
+    public List<PacketDTO> getPackets(
+            @RequestParam(value = "cycleId", required = false) String cycleId,
+            Authentication authentication) {
         String username = authentication.getName();
         String role = authentication.getAuthorities().iterator().next().getAuthority();
-        return packetService.getPackets(username, role);
+        return packetService.getPackets(username, role, cycleId);
     }
 
     @GetMapping("/{id}")
@@ -54,11 +56,14 @@ public class PacketController {
     }
 
     @GetMapping("/export/csv")
-    public void exportCsv(Authentication authentication,
-                          HttpServletResponse response) throws IOException {
+    public void exportCsv(
+            @RequestParam(value = "cycleId", required = false) String cycleId,
+            Authentication authentication,
+            HttpServletResponse response) throws IOException {
         String username = authentication.getName();
         String role = authentication.getAuthorities().iterator().next().getAuthority();
-        List<PacketDTO> packets = packetService.getPackets(username, role);
+        List<PacketDTO> packets = packetService.getPackets(username, role, cycleId);
+
 
         response.setContentType("text/csv");
         response.setHeader("Content-Disposition", "attachment; filename=packets.csv");
