@@ -5,10 +5,12 @@ import com.exam_paper.backend.dto.PacketDTO;
 import com.exam_paper.backend.dto.PacketDetailDTO;
 import com.exam_paper.backend.entity.ExamPacket;
 import com.exam_paper.backend.entity.PacketAttachment;
+import com.exam_paper.backend.entity.PacketComment;
 import com.exam_paper.backend.entity.User;
 import com.exam_paper.backend.repository.*;
 import com.exam_paper.backend.entity.Course;
 import com.exam_paper.backend.entity.PacketStatus;
+import com.exam_paper.backend.entity.Marking;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,15 +19,19 @@ import com.exam_paper.backend.entity.Notification;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import java.io.File;
+import com.exam_paper.backend.entity.AcademicCycle;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PacketService {
     private final PacketRepository packetRepository;
+    private final ExamPacketRepository examPacketRepository;
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final PacketStatusRepository packetStatusRepository;
@@ -35,6 +41,21 @@ public class PacketService {
     private final PacketCommentRepository packetCommentRepository;
     private final ActivityLogRepository activityLogRepository;
     private final DelayReasonRepository delayReasonRepository;
+    private final AcademicCycleRepository academicCycleRepository;
+    private final AcademicCycleService academicCycleService;
+    private final MarkingRepository markingRepository;
+
+    public static String cleanCycleId(String cycleId) {
+        if (cycleId == null) return null;
+        String trimmed = cycleId.trim();
+        if (trimmed.isEmpty() || "null".equalsIgnoreCase(trimmed) || "undefined".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+        if (trimmed.contains(",")) {
+            trimmed = trimmed.split(",")[0].trim();
+        }
+        return trimmed;
+    }
 
     public PacketStatus getOrCreateStatus(String statusName) {
         return packetStatusRepository.findByStatusName(statusName)
@@ -52,6 +73,11 @@ public class PacketService {
 
     @Transactional
     public void syncMissingPacketsForCourses() {
+        syncMissingPacketsForCycle(null);
+    }
+
+    @Transactional
+    public void syncMissingPacketsForCycle(String cycleId) {
         try {
             // Ensure all essential statuses exist
             getOrCreateStatus("PENDING");
@@ -65,12 +91,39 @@ public class PacketService {
             getOrCreateStatus("MARKING");
             getOrCreateStatus("COMPLETED");
 
+            AcademicCycle activeCycle = academicCycleService.getActiveCycleEntity();
+
+            // 1. Backfill legacy packets with null cycle to active cycle
+            if (activeCycle != null) {
+                List<ExamPacket> unassigned = examPacketRepository.findPacketsWithoutCycle();
+                if (unassigned != null && !unassigned.isEmpty()) {
+                    for (ExamPacket p : unassigned) {
+                        p.setAcademicCycle(activeCycle);
+                    }
+                    packetRepository.saveAll(unassigned);
+                }
+            }
+
+            // 2. Identify target cycle to ensure packets exist for catalog courses
+            AcademicCycle targetCycle = null;
+            String cleanedCycleId = cleanCycleId(cycleId);
+            if (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) {
+                targetCycle = academicCycleRepository.findByCycleId(cleanedCycleId).orElse(activeCycle);
+            } else {
+                targetCycle = activeCycle;
+            }
+
+            if (targetCycle == null) return;
+
             List<Course> allCourses = courseRepository.findAll();
             PacketStatus defaultStatus = getOrCreateStatus("PENDING");
 
             for (Course c : allCourses) {
-                if (!packetRepository.existsByCourse_CourseId(c.getCourseId())) {
+                boolean exists = packetRepository.existsByCourse_CourseIdAndAcademicCycle_CycleId(c.getCourseId(), targetCycle.getCycleId());
+
+                if (!exists) {
                     ExamPacket p = new ExamPacket();
+                    p.setAcademicCycle(targetCycle);
                     p.setCourse(c);
                     p.setLecturer(c.getLecturer());
                     p.setModerator(c.getModerator());
@@ -81,10 +134,11 @@ public class PacketService {
                     p.setFormat("Standard Exam");
                     ExamPacket saved = packetRepository.save(p);
 
+                    String cycleLabel = " [" + (targetCycle.getCycleName() != null ? targetCycle.getCycleName() : targetCycle.getCycleId()) + "]";
                     activityLogService.logForPacket(
                             saved,
                             "PENDING",
-                            "Exam packet initialized with PENDING status for course " + c.getCourseCode() + " (" + c.getCourseName() + ")",
+                            "Exam packet initialized with PENDING status for course " + c.getCourseCode() + " (" + c.getCourseName() + ")" + cycleLabel,
                             "Academic Registry",
                             "AR",
                             "bg-blue-500"
@@ -92,40 +146,73 @@ public class PacketService {
                 }
             }
         } catch (Exception e) {
-            // Avoid blocking app startup if tables aren't ready yet
+            // Avoid blocking app startup or request if tables aren't ready yet
         }
     }
 
     public List<PacketDTO> getPackets(String username, String role) {
-        syncMissingPacketsForCourses();
+        return getPackets(username, role, null);
+    }
+
+    public List<PacketDTO> getPackets(String username, String role, String cycleId) {
+        String cleaned = cleanCycleId(cycleId);
+        String targetCycleId = cleaned;
+        if (targetCycleId == null || targetCycleId.trim().isEmpty() || "ACTIVE".equalsIgnoreCase(targetCycleId)) {
+            AcademicCycle active = academicCycleService.getActiveCycleEntity();
+            targetCycleId = active != null ? active.getCycleId() : null;
+        }
+
+        syncMissingPacketsForCycle(targetCycleId);
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<ExamPacket> packets;
+        boolean isAllCycles = "ALL".equalsIgnoreCase(cleaned);
 
-        switch (role) {
-            case "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN" ->
-                    packets = packetRepository.findAllWithDetails();
-            case "ROLE_GUEST" -> {
-                if (user.getDepartment() != null) {
-                    packets = packetRepository.findByDepartmentIdWithDetails(user.getDepartment().getDepartmentId());
-                } else {
-                    packets = packetRepository.findAllWithDetails();
+        if (isAllCycles) {
+            switch (role) {
+                case "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN" ->
+                        packets = packetRepository.findAllWithDetails();
+                case "ROLE_GUEST" -> {
+                    if (user.getDepartment() != null) {
+                        packets = packetRepository.findByDepartmentIdWithDetails(user.getDepartment().getDepartmentId());
+                    } else {
+                        packets = packetRepository.findAllWithDetails();
+                    }
                 }
+                case "ROLE_USER" ->
+                        packets = packetRepository.findByLecturerOrModeratorId(user.getUserId());
+                case "ROLE_MODERATOR" ->
+                        packets = packetRepository.findByModeratorId(user.getUserId());
+                default ->
+                        packets = List.of();
             }
-            case "ROLE_USER" ->
-                    packets = packetRepository.findByLecturerOrModeratorId(user.getUserId());
-            case "ROLE_MODERATOR" ->
-                    packets = packetRepository.findByModeratorId(user.getUserId());
-            default ->
-                    packets = List.of();
+        } else {
+            switch (role) {
+                case "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN" ->
+                        packets = packetRepository.findAllWithDetailsByCycleId(targetCycleId);
+                case "ROLE_GUEST" -> {
+                    if (user.getDepartment() != null) {
+                        packets = packetRepository.findByDepartmentIdAndCycleId(user.getDepartment().getDepartmentId(), targetCycleId);
+                    } else {
+                        packets = packetRepository.findAllWithDetailsByCycleId(targetCycleId);
+                    }
+                }
+                case "ROLE_USER" ->
+                        packets = packetRepository.findByLecturerOrModeratorIdAndCycleId(user.getUserId(), targetCycleId);
+                case "ROLE_MODERATOR" ->
+                        packets = packetRepository.findByModeratorIdAndCycleId(user.getUserId(), targetCycleId);
+                default ->
+                        packets = List.of();
+            }
         }
 
         return packets.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
+
 
     public PacketDetailDTO getPacketDetail(Long id) {
         ExamPacket p = packetRepository.findByIdWithDetails(id)
@@ -165,6 +252,21 @@ public class PacketService {
         String moderatorUsername = p.getModerator() != null ? p.getModerator().getUsername() : null;
 
         String statusName = p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING";
+        String cycleId = p.getAcademicCycle() != null ? p.getAcademicCycle().getCycleId() : null;
+        String cycleName = p.getAcademicCycle() != null ? p.getAcademicCycle().getCycleName() : null;
+
+        Integer numberOfCopies = p.getNumberOfCopies() != null ? p.getNumberOfCopies() : 50;
+        Integer totalScripts = numberOfCopies;
+        Integer markedScripts = 0;
+        if (p.getMarking() != null) {
+            if (p.getMarking().getTotalScripts() != null && p.getMarking().getTotalScripts() > 0) {
+                totalScripts = p.getMarking().getTotalScripts();
+            }
+            if (p.getMarking().getMarkedScripts() != null) {
+                markedScripts = p.getMarking().getMarkedScripts();
+            }
+        }
+        double markingProgress = totalScripts > 0 ? ((double) markedScripts / totalScripts) * 100.0 : 0.0;
 
         return PacketDetailDTO.builder()
                 .packetId(packetId)
@@ -183,11 +285,17 @@ public class PacketService {
                 .status(statusName)
                 .priority(priority)
                 .overdue(overdue)
+                .cycleId(cycleId)
+                .cycleName(cycleName)
                 .duration(p.getDuration())
                 .totalMarks(p.getTotalMarks())
                 .questions(p.getQuestions())
                 .format(p.getFormat())
                 .moderatorNote(p.getModeratorNote())
+                .numberOfCopies(numberOfCopies)
+                .totalScripts(totalScripts)
+                .markedScripts(markedScripts)
+                .markingProgress(Math.round(markingProgress * 10.0) / 10.0)
                 .build();
     }
 
@@ -224,6 +332,21 @@ public class PacketService {
         String moderatorUsername = p.getModerator() != null ? p.getModerator().getUsername() : null;
 
         String statusName = p.getStatus() != null ? p.getStatus().getStatusName() : "PENDING";
+        String cycleId = p.getAcademicCycle() != null ? p.getAcademicCycle().getCycleId() : null;
+        String cycleName = p.getAcademicCycle() != null ? p.getAcademicCycle().getCycleName() : null;
+
+        Integer numberOfCopies = p.getNumberOfCopies() != null ? p.getNumberOfCopies() : 50;
+        Integer totalScripts = numberOfCopies;
+        Integer markedScripts = 0;
+        if (p.getMarking() != null) {
+            if (p.getMarking().getTotalScripts() != null && p.getMarking().getTotalScripts() > 0) {
+                totalScripts = p.getMarking().getTotalScripts();
+            }
+            if (p.getMarking().getMarkedScripts() != null) {
+                markedScripts = p.getMarking().getMarkedScripts();
+            }
+        }
+        double markingProgress = totalScripts > 0 ? ((double) markedScripts / totalScripts) * 100.0 : 0.0;
 
         return PacketDTO.builder()
                 .id(p.getPacketId())
@@ -240,6 +363,12 @@ public class PacketService {
                 .overdue(overdue)
                 .status(statusName)
                 .priority(priority)
+                .cycleId(cycleId)
+                .cycleName(cycleName)
+                .numberOfCopies(numberOfCopies)
+                .totalScripts(totalScripts)
+                .markedScripts(markedScripts)
+                .markingProgress(Math.round(markingProgress * 10.0) / 10.0)
                 .build();
     }
 
@@ -251,9 +380,17 @@ public class PacketService {
         Course course = courseRepository.findById(dto.getCourseId())
                 .orElseThrow(() -> new RuntimeException("Course not found"));
 
-        if (packetRepository.existsByCourse_CourseId(dto.getCourseId())) {
-            throw new IllegalArgumentException("An exam packet already exists for course " + course.getCourseCode() + ". Each course can only have one active packet.");
+        AcademicCycle cycle = null;
+        if (dto.getCycleId() != null && !dto.getCycleId().trim().isEmpty()) {
+            cycle = academicCycleRepository.findByCycleId(dto.getCycleId()).orElse(null);
         }
+        if (cycle == null) {
+            cycle = academicCycleService.getActiveCycleEntity();
+        }
+
+        ExamPacket existingPacket = (cycle != null)
+                ? packetRepository.findByCourse_CourseIdAndAcademicCycle_CycleId(dto.getCourseId(), cycle.getCycleId()).orElse(null)
+                : null;
 
         User lecturer = null;
         if (dto.getLecturerId() != null) {
@@ -277,24 +414,55 @@ public class PacketService {
             status = packetStatusRepository.findById(dto.getStatusId()).orElse(null);
         }
         if (status == null) {
-            status = getOrCreateStatus("PENDING");
+            status = (existingPacket != null && existingPacket.getStatus() != null)
+                    ? existingPacket.getStatus()
+                    : getOrCreateStatus("PENDING");
         }
 
-        ExamPacket packet = new ExamPacket();
-        packet.setCourse(course);
+        ExamPacket packet;
+        if (existingPacket != null) {
+            packet = existingPacket;
+        } else {
+            packet = new ExamPacket();
+            packet.setAcademicCycle(cycle);
+            packet.setCourse(course);
+        }
+
         packet.setLecturer(lecturer);
         packet.setModerator(moderator);
         packet.setStatus(status);
         packet.setDeadline(dto.getDeadline());
         packet.setModerationDeadline(dto.getModerationDeadline());
         packet.setExamDate(dto.getExamDate());
-        packet.setDuration(dto.getDuration());
-        packet.setTotalMarks(dto.getTotalMarks());
-        packet.setQuestions(dto.getQuestions());
-        packet.setFormat(dto.getFormat());
+        packet.setDuration(dto.getDuration() != null && !dto.getDuration().isBlank() ? dto.getDuration() : "3 Hours");
+        packet.setTotalMarks(dto.getTotalMarks() != null ? dto.getTotalMarks() : 100);
+        packet.setQuestions(dto.getQuestions() != null && !dto.getQuestions().isBlank() ? dto.getQuestions() : "All sections mandatory");
+        packet.setFormat(dto.getFormat() != null && !dto.getFormat().isBlank() ? dto.getFormat() : "Standard Exam");
         packet.setModeratorNote(dto.getModeratorNote());
+        Integer copies = dto.getNumberOfCopies() != null && dto.getNumberOfCopies() > 0 ? dto.getNumberOfCopies() : 50;
+        packet.setNumberOfCopies(copies);
 
         ExamPacket saved = packetRepository.save(packet);
+
+        // Sync or initialize Marking entity
+        if (lecturer != null) {
+            Optional<Marking> existingMarking = markingRepository.findByPacketPacketId(saved.getPacketId());
+            if (existingMarking.isEmpty()) {
+                Marking m = Marking.builder()
+                        .markingId("MK" + UUID.randomUUID().toString().substring(0, 8))
+                        .packet(saved)
+                        .lecturer(lecturer)
+                        .totalScripts(copies)
+                        .markedScripts(0)
+                        .build();
+                markingRepository.save(m);
+            } else {
+                Marking m = existingMarking.get();
+                m.setTotalScripts(copies);
+                m.setLecturer(lecturer);
+                markingRepository.save(m);
+            }
+        }
 
         User creator = username != null ? userRepository.findByUsername(username).orElse(null) : null;
         String creatorName = creator != null ? creator.getFullName() : "Academic Registry";
@@ -307,7 +475,7 @@ public class PacketService {
         // 1. Activity log
         activityLogService.logForPacket(
                 saved, statusLabel,
-                "Exam packet created for " + course.getCourseCode() + " (Lecturer: " + lecName + ", Moderator: " + modName + ")",
+                "Exam packet created for " + course.getCourseCode() + " (Lecturer: " + lecName + ", Moderator: " + modName + ", Copies: " + copies + ")",
                 creatorName, initials, "bg-blue-500"
         );
 
@@ -400,8 +568,30 @@ public class PacketService {
         packet.setQuestions(dto.getQuestions());
         packet.setFormat(dto.getFormat());
         packet.setModeratorNote(dto.getModeratorNote());
+        Integer updatedCopies = dto.getNumberOfCopies() != null && dto.getNumberOfCopies() > 0 ? dto.getNumberOfCopies() : (packet.getNumberOfCopies() != null ? packet.getNumberOfCopies() : 50);
+        packet.setNumberOfCopies(updatedCopies);
 
         ExamPacket saved = packetRepository.save(packet);
+
+        // Sync or initialize Marking entity
+        if (lecturer != null) {
+            Optional<Marking> existingMarking = markingRepository.findByPacketPacketId(saved.getPacketId());
+            if (existingMarking.isEmpty()) {
+                Marking m = Marking.builder()
+                        .markingId("MK" + UUID.randomUUID().toString().substring(0, 8))
+                        .packet(saved)
+                        .lecturer(lecturer)
+                        .totalScripts(updatedCopies)
+                        .markedScripts(0)
+                        .build();
+                markingRepository.save(m);
+            } else {
+                Marking m = existingMarking.get();
+                m.setTotalScripts(updatedCopies);
+                m.setLecturer(lecturer);
+                markingRepository.save(m);
+            }
+        }
 
         User updater = username != null ? userRepository.findByUsername(username).orElse(null) : null;
         String updaterName = updater != null ? updater.getFullName() : "Academic Registry";
@@ -503,21 +693,41 @@ public class PacketService {
         if (!isPrivileged && (actor.getRole() == User.Role.ROLE_USER || actor.getRole() == User.Role.ROLE_MODERATOR)) {
             boolean isModeratorAction = "APPROVE".equalsIgnoreCase(action) || "APPROVED".equalsIgnoreCase(action) ||
                                         "REJECT".equalsIgnoreCase(action) || "REJECTED".equalsIgnoreCase(action) ||
-                                        "REVISE".equalsIgnoreCase(action) || "RETURN".equalsIgnoreCase(action);
+                                        "REVISE".equalsIgnoreCase(action) || "RETURN".equalsIgnoreCase(action) ||
+                                        "COMPLETE_SECOND_MARKING".equalsIgnoreCase(action) || "SECOND_MARKING_COMPLETE".equalsIgnoreCase(action);
 
             if (isModeratorAction) {
                 if (packet.getModerator() == null || !packet.getModerator().getUserId().equals(actor.getUserId())) {
-                    throw new IllegalArgumentException("Only the designated moderator can review and approve or reject this exam packet.");
+                    throw new IllegalArgumentException("Only the designated moderator can review, approve/reject, or conduct second marking for this exam packet.");
                 }
             } else {
                 if (packet.getLecturer() == null || !packet.getLecturer().getUserId().equals(actor.getUserId())) {
-                    throw new IllegalArgumentException("As an assigned moderator, you can only review, comment, and approve or reject this exam paper. Other author workflow actions are restricted to the course lecturer.");
+                    throw new IllegalArgumentException("Only the designated course lecturer can perform this workflow action.");
                 }
             }
         }
 
+        if ("REJECT".equalsIgnoreCase(action) || "REJECTED".equalsIgnoreCase(action) ||
+            "RETURN".equalsIgnoreCase(action) || "REVISE".equalsIgnoreCase(action)) {
+            if (dto.getNote() == null || dto.getNote().trim().isEmpty()) {
+                throw new IllegalArgumentException("A comment is compulsory when rejecting or returning an exam packet.");
+            }
+        }
+
         if (dto.getNote() != null && !dto.getNote().trim().isEmpty()) {
-            packet.setModeratorNote(dto.getNote().trim());
+            String cleanNote = dto.getNote().trim();
+            packet.setModeratorNote(cleanNote);
+
+            if ("REJECT".equalsIgnoreCase(action) || "REJECTED".equalsIgnoreCase(action) ||
+                "RETURN".equalsIgnoreCase(action) || "REVISE".equalsIgnoreCase(action)) {
+                PacketComment rejectionComment = PacketComment.builder()
+                        .packet(packet)
+                        .user(actor)
+                        .comment("Moderator Feedback: " + cleanNote)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                packetCommentRepository.save(rejectionComment);
+            }
         }
 
         switch (action) {
@@ -619,8 +829,9 @@ public class PacketService {
             case "REJECT", "REJECTED" -> {
                 newStatusName = "REJECTED";
                 stageName = "REJECTED";
+                String feedbackNote = dto.getNote() != null ? dto.getNote().trim() : "";
                 logMessage = "Exam paper rejected by Moderator " + actor.getFullName()
-                        + (dto.getNote() != null && !dto.getNote().isBlank() ? " — Feedback: " + dto.getNote() : "");
+                        + (!feedbackNote.isEmpty() ? " — Feedback: " + feedbackNote : "");
 
                 // Notify Lecturer (Urgent)
                 if (packet.getLecturer() != null) {
@@ -629,7 +840,7 @@ public class PacketService {
                             .packet(packet)
                             .courseCode(courseCode)
                             .title("Revision Required - Paper Rejected")
-                            .message("The exam paper for " + courseCode + " (" + courseName + ") was rejected by Moderator " + actor.getFullName() + (dto.getNote() != null && !dto.getNote().isBlank() ? ". Feedback: " + dto.getNote() : "") + ". Please review feedback and resubmit.")
+                            .message("The exam paper for " + courseCode + " (" + courseName + ") was rejected by Moderator " + actor.getFullName() + (!feedbackNote.isEmpty() ? ". Feedback: " + feedbackNote : "") + ". Please review feedback and resubmit.")
                             .type("URGENT")
                             .isRead(false)
                             .isUrgent(true)
@@ -641,8 +852,9 @@ public class PacketService {
             case "RETURN" -> {
                 newStatusName = "REJECTED";
                 stageName = "REJECTED";
+                String returnNote = dto.getNote() != null ? dto.getNote().trim() : "";
                 logMessage = "Returned for revision by " + actor.getFullName()
-                        + (dto.getNote() != null && !dto.getNote().isBlank() ? " — Note: " + dto.getNote() : "");
+                        + (!returnNote.isEmpty() ? " — Note: " + returnNote : "");
 
                 // Notify Lecturer (Urgent)
                 if (packet.getLecturer() != null) {
@@ -651,7 +863,7 @@ public class PacketService {
                             .packet(packet)
                             .courseCode(courseCode)
                             .title("Revision Requested")
-                            .message("The exam paper for " + courseCode + " (" + courseName + ") was returned for revision by " + actor.getFullName() + (dto.getNote() != null && !dto.getNote().isBlank() ? ". Note: " + dto.getNote() : "") + ".")
+                            .message("The exam paper for " + courseCode + " (" + courseName + ") was returned for revision by " + actor.getFullName() + (!returnNote.isEmpty() ? ". Note: " + returnNote : "") + ".")
                             .type("MODERATION")
                             .isRead(false)
                             .isUrgent(true)
@@ -721,18 +933,18 @@ public class PacketService {
                     notificationRepository.save(notifLec);
                 }
             }
-            case "MARKING", "START_MARKING" -> {
+            case "FIRST_MARKING", "START_FIRST_MARKING", "MARKING", "START_MARKING" -> {
                 newStatusName = "MARKING";
-                stageName = "MARKING";
-                logMessage = "Exam paper marking started by " + actor.getFullName();
+                stageName = "FIRST_MARKING";
+                logMessage = "First marking started by lecturer " + actor.getFullName();
 
                 if (packet.getLecturer() != null) {
                     Notification notifLec = Notification.builder()
                             .user(packet.getLecturer())
                             .packet(packet)
                             .courseCode(courseCode)
-                            .title("Marking in Progress")
-                            .message("Marking in progress for " + courseCode + " (" + courseName + ").")
+                            .title("First Marking in Progress")
+                            .message("First marking in progress for " + courseCode + " (" + courseName + ").")
                             .type("MODERATION")
                             .isRead(false)
                             .isUrgent(false)
@@ -741,10 +953,89 @@ public class PacketService {
                     notificationRepository.save(notifLec);
                 }
             }
-            case "MARKING_COMPLETE", "MARKING COMPLETE", "COMPLETE", "COMPLETED" -> {
+            case "COMPLETE_FIRST_MARKING", "MARKING_COMPLETE", "MARKING COMPLETE", "SECOND_MARKING", "START_SECOND_MARKING" -> {
+                newStatusName = "SECOND_MARKING";
+                stageName = "SECOND_MARKING";
+                logMessage = "First marking completed by lecturer " + actor.getFullName() + ". Transferred to moderator for second marking.";
+
+                // 1. Notify Moderator for 2nd marking
+                if (packet.getModerator() != null) {
+                    Notification notifMod = Notification.builder()
+                            .user(packet.getModerator())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Action Required: Second Marking")
+                            .message("Lecturer has completed first marking for " + courseCode + " (" + courseName + "). Please proceed with second marking.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(true)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifMod);
+                }
+
+                // 2. Notify Lecturer
+                if (packet.getLecturer() != null) {
+                    Notification notifLec = Notification.builder()
+                            .user(packet.getLecturer())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("First Marking Completed")
+                            .message("First marking for " + courseCode + " submitted. Awaiting second marking from moderator.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifLec);
+                }
+            }
+            case "COMPLETE_SECOND_MARKING", "SECOND_MARKING_COMPLETE" -> {
+                newStatusName = "SECOND_MARKING_COMPLETE";
+                stageName = "SECOND_MARKING_COMPLETE";
+                logMessage = "Second marking completed by moderator " + actor.getFullName() + ". Returned to lecturer for finalization.";
+
+                // 1. Notify Lecturer
+                if (packet.getLecturer() != null) {
+                    Notification notifLec = Notification.builder()
+                            .user(packet.getLecturer())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Action Required: Finalize Exam Packet")
+                            .message("Moderator has completed second marking for " + courseCode + " (" + courseName + "). You can now finalize and store the packet.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(true)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifLec);
+                }
+
+                // 2. Notify Moderator
+                if (packet.getModerator() != null) {
+                    Notification notifMod = Notification.builder()
+                            .user(packet.getModerator())
+                            .packet(packet)
+                            .courseCode(courseCode)
+                            .title("Second Marking Submitted")
+                            .message("You have completed second marking for " + courseCode + " (" + courseName + "). Packet returned to lecturer for finalization.")
+                            .type("MODERATION")
+                            .isRead(false)
+                            .isUrgent(false)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+                    notificationRepository.save(notifMod);
+                }
+            }
+            case "COMPLETE", "COMPLETED", "FINALIZE_PACKET" -> {
+                String curStatus = packet.getStatus() != null ? packet.getStatus().getStatusName() : "";
+                if (!isPrivileged && !"SECOND_MARKING_COMPLETE".equalsIgnoreCase(curStatus) && !"SECOND MARKING COMPLETE".equalsIgnoreCase(curStatus)) {
+                    throw new IllegalArgumentException("Cannot complete exam packet. Second marking must be completed by the assigned moderator before finalization. Current stage: " + curStatus);
+                }
+
                 newStatusName = "COMPLETED";
                 stageName = "COMPLETED";
-                logMessage = "Exam packet marked completed and stored by " + actor.getFullName();
+                logMessage = "Exam packet finalized and stored by " + actor.getFullName();
 
                 // 1. Notify Lecturer
                 if (packet.getLecturer() != null) {

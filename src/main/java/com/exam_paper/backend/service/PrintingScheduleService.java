@@ -394,13 +394,25 @@ public class PrintingScheduleService {
      * Get all schedules with date range, status, or search filters.
      */
     public List<PrintingScheduleResponseDTO> getAllSchedules(LocalDate fromDate, LocalDate toDate, String status, Long departmentId) {
+        return getAllSchedules(fromDate, toDate, status, departmentId, null);
+    }
+
+    public List<PrintingScheduleResponseDTO> getAllSchedules(LocalDate fromDate, LocalDate toDate, String status, Long departmentId, String cycleId) {
         LocalDate start = (fromDate != null) ? fromDate : LocalDate.now().minusDays(7);
         LocalDate end = (toDate != null) ? toDate : LocalDate.now().plusMonths(1);
+
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
 
         List<PrintingSchedule> list = printingScheduleRepository.findByScheduleDateBetweenOrderByScheduleDateAscStartTimeAsc(start, end);
 
         return list.stream()
                 .filter(s -> status == null || "ALL".equalsIgnoreCase(status) || s.getStatus().equalsIgnoreCase(status))
+                .filter(s -> {
+                    if (effectiveCycleId == null) return true;
+                    ExamPacket p = s.getPacket();
+                    return p != null && p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId());
+                })
                 .filter(s -> {
                     if (departmentId == null) return true;
                     ExamPacket p = s.getPacket();
@@ -415,11 +427,25 @@ public class PrintingScheduleService {
      * Get schedules for the currently logged in lecturer.
      */
     public List<PrintingScheduleResponseDTO> getMySchedules(String username) {
+        return getMySchedules(username, null);
+    }
+
+    public List<PrintingScheduleResponseDTO> getMySchedules(String username, String cycleId) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
 
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
         List<PrintingSchedule> list = printingScheduleRepository.findByLecturerOrderByScheduleDateDescStartTimeDesc(user);
-        return list.stream().map(this::mapToDTO).collect(Collectors.toList());
+        return list.stream()
+                .filter(s -> {
+                    if (effectiveCycleId == null) return true;
+                    ExamPacket p = s.getPacket();
+                    return p != null && p.getAcademicCycle() != null && effectiveCycleId.equalsIgnoreCase(p.getAcademicCycle().getCycleId());
+                })
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -435,12 +461,28 @@ public class PrintingScheduleService {
      * Statistics for printing queue dashboard.
      */
     public Map<String, Object> getPrintingStats() {
+        return getPrintingStats(null);
+    }
+
+    public Map<String, Object> getPrintingStats(String cycleId) {
         LocalDate today = LocalDate.now();
-        long todayTotal = printingScheduleRepository.countByScheduleDate(today);
-        long todayScheduled = printingScheduleRepository.countByScheduleDateAndStatus(today, "SCHEDULED");
-        long todayInProgress = printingScheduleRepository.countByScheduleDateAndStatus(today, "IN_PROGRESS");
-        long todayCompleted = printingScheduleRepository.countByScheduleDateAndStatus(today, "COMPLETED");
-        long totalCompleted = printingScheduleRepository.countByStatus("COMPLETED");
+
+        String cleanedCycleId = PacketService.cleanCycleId(cycleId);
+        String effectiveCycleId = (cleanedCycleId != null && !"ALL".equalsIgnoreCase(cleanedCycleId)) ? cleanedCycleId : null;
+
+        List<PrintingSchedule> allSchedules = printingScheduleRepository.findAll();
+        if (effectiveCycleId != null) {
+            allSchedules = allSchedules.stream()
+                    .filter(s -> s.getPacket() != null && s.getPacket().getAcademicCycle() != null
+                            && effectiveCycleId.equalsIgnoreCase(s.getPacket().getAcademicCycle().getCycleId()))
+                    .collect(Collectors.toList());
+        }
+
+        long todayTotal = allSchedules.stream().filter(s -> today.equals(s.getScheduleDate())).count();
+        long todayScheduled = allSchedules.stream().filter(s -> today.equals(s.getScheduleDate()) && "SCHEDULED".equalsIgnoreCase(s.getStatus())).count();
+        long todayInProgress = allSchedules.stream().filter(s -> today.equals(s.getScheduleDate()) && "IN_PROGRESS".equalsIgnoreCase(s.getStatus())).count();
+        long todayCompleted = allSchedules.stream().filter(s -> today.equals(s.getScheduleDate()) && "COMPLETED".equalsIgnoreCase(s.getStatus())).count();
+        long totalCompleted = allSchedules.stream().filter(s -> "COMPLETED".equalsIgnoreCase(s.getStatus())).count();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("todayTotal", todayTotal);
